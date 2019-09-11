@@ -10,90 +10,92 @@ var byteIndex int = 0
 
 
 type ExceptionTable struct {
-	start_pc int // u2
-	end_pc int // u2
-	handler_pc int //u2
-	catch_type int // u2
+	start_pc u2
+	end_pc u2
+	handler_pc u2
+	catch_type u2
 }
 
 type CodeAttribute struct {
-	attribute_name_index int // u2
-	attribute_length int // u4
-	max_stqck int // u2
-	max_locals int // u2
-	code_length int // u4
+	attribute_name_index u2
+	attribute_length u4
+	max_stqck u2
+	max_locals u2
+	code_length u4
 	code []byte
-	exception_table_length int // u2
+	exception_table_length u2
 	exception_tables []ExceptionTable
-	attributes_count int // u2
+	attributes_count u2
 	attribute_infos []AttributeInfo
 	//body []byte
 }
 
 type AttributeInfo struct {
-	attribute_name_index int // u2
-	attribute_length int // u4
+	attribute_name_index u2
+	attribute_length u4
 	body []byte
 }
 
 type MethodInfo struct {
-	access_flags     int
-	name_index       int
-	descriptor_index int
-	attributes_count int
+	access_flags     u2
+	name_index       u2
+	descriptor_index u2
+	attributes_count u2
 	ai    []CodeAttribute
 }
 
 type ConstantNameAndType struct {
 	tag byte
-	first int
-	second int
+	first u2
+	second u2
 }
 
 type ConstantUTF8 struct {
 	tag byte
-	len int
+	len u2
 	content string
 }
 
 type ConstantClass struct {
 	tag byte
-	s int
+	s u2
 }
 
 
 type ConstantString struct {
 	tag byte
-	s int
+	s u2
 }
 
 type ConstantMethodfRef struct {
 	tag byte
-	first int
-	second int
+	first u2
+	second u2
 }
 
-func readCafebabe() []byte {
+func readCafebabe() [4]byte {
 	byteIndex += 4
-	return bytes[0:4]
+	return [4]byte{bytes[0],bytes[1], bytes[2],bytes[3]}
 }
 
-func readU2() int {
+type u2 uint16
+type u4 uint32
+
+func readU2() u2 {
 	left := bytes[byteIndex]
 	right := bytes[byteIndex+1]
 	byteIndex += 2
 
-	return int(int(left) * 256 + int(right))
+	return u2(u2(left) * 256 + u2(right))
 }
-
-func readU4() int {
+func readU4() u4 {
 	b1 := bytes[byteIndex]
 	b2 := bytes[byteIndex+1]
 	b3 := bytes[byteIndex+2]
 	b4 := bytes[byteIndex+3]
 	byteIndex += 4
 
-	return int(int(b1) * 256 * 256 * 256 + int(b2) * 256 * 256 + int(b3) * 256 + int(b4))
+	return u4(u4(b1) * 256 * 256 * 256 + u4(b2) * 256 * 256 + u4(b3) * 256 + u4(b4))
 }
 
 func readBytes(n int) []byte {
@@ -110,9 +112,9 @@ func readByte() byte {
 func readAttributeInfo() AttributeInfo {
 	a := AttributeInfo{
 		attribute_name_index: readU2(),
-		attribute_length: readU4(),
+		attribute_length:     readU4(),
 	}
-	a.body = readBytes(a.attribute_length)
+	a.body = readBytes(int(a.attribute_length))
 	return a
 }
 
@@ -126,18 +128,18 @@ func readExceptionTable() {
 func readCodeAttribute() CodeAttribute {
 	a := CodeAttribute{
 		attribute_name_index: readU2(),
-		attribute_length: readU4(),
-		max_stqck:readU2(),
-		max_locals:readU2(),
-		code_length:readU4(),
+		attribute_length:     readU4(),
+		max_stqck:            readU2(),
+		max_locals:           readU2(),
+		code_length:          readU4(),
 	}
-	a.code = readBytes(a.code_length)
+	a.code = readBytes(int(a.code_length))
 	a.exception_table_length = readU2()
-	for i:=0;i<a.exception_table_length;i++ {
+	for i:=u2(0);i<a.exception_table_length;i++ {
 		readExceptionTable()
 	}
 	a.attributes_count = readU2()
-	for i:=0;i<a.attributes_count;i++ {
+	for i:=u2(0);i<a.attributes_count;i++ {
 		readAttributeInfo()
 	}
 	return a
@@ -151,13 +153,18 @@ func readMethodInfo() MethodInfo {
 		attributes_count: readU2(),
 	}
 	var cas []CodeAttribute
-	for i:=0;i<methodInfo.attributes_count; i++ {
+	for i:=u2(0);i<methodInfo.attributes_count; i++ {
 		ca := readCodeAttribute()
 		cas = append(cas, ca)
 	}
 	methodInfo.ai = cas
 
 	return methodInfo
+}
+
+// https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-4.html#jvms-4.1
+type ClassFile struct {
+	magic [4]byte
 }
 
 func main() {
@@ -167,48 +174,48 @@ func main() {
 		panic(err)
 	}
 
-	cafebabe := readCafebabe()
-	for _, char := range cafebabe {
-		fmt.Printf("%x ", char)
+	cf := ClassFile{
+		magic:readCafebabe(),
 	}
+
 	major_version := readU2()
 	minor_version := readU2()
 	constant_pool_count := readU2()
 	var entries []interface{}
 	entries = append(entries, nil)
-	for i:=0; i< constant_pool_count -1 ; i++ {
+	for i:=u2(0); i< constant_pool_count -1 ; i++ {
 		tag := readByte()
 		//fmt.Printf("[i=%d] tag=%02X\n", i, tag)
 		var e interface{}
 		switch tag {
 		case 0x0a, 0x09:
 			e = &ConstantMethodfRef{
-				first:readU2(),
-				second:readU2(),
-				tag:tag,
+				first:  readU2(),
+				second: readU2(),
+				tag:    tag,
 			}
 		case 0x08:
 			e = &ConstantString{
-				s: readU2(),
-				tag:tag,
+				s:   readU2(),
+				tag: tag,
 			}
 		case 0x07:
 			e = &ConstantClass{
-				s: readU2(),
-				tag:tag,
+				s:   readU2(),
+				tag: tag,
 			}
 		case 0x01:
 			ln := readU2()
 			e = &ConstantUTF8{
 				tag:tag,
 				len: ln,
-				content: string(readBytes(ln)),
+				content: string(readBytes(int(ln))),
 			}
 		case 0x0c:
 			e = &ConstantNameAndType{
-				first:readU2(),
-				second:readU2(),
-				tag:tag,
+				first:  readU2(),
+				second: readU2(),
+				tag:    tag,
 			}
 		default:
 			panic("unknown tag")
@@ -221,12 +228,11 @@ func main() {
 	this_class := readU2()
 	super_class := readU2()
 	interface_count := readU2()
-	//interfaces := readU2()
 	fields_count := readU2()
 	methods_count := readU2()
 
 	var methods []MethodInfo = make([]MethodInfo, methods_count)
-	for i:=0;i<methods_count;i++ {
+	for i := u2(0);i<methods_count;i++ {
 		methodInfo := readMethodInfo()
 		methods[i] = methodInfo
 	}
@@ -236,6 +242,10 @@ func main() {
 		fmt.Printf("__EOF__\n")
 	}
 
+	for _, char := range cf.magic {
+		fmt.Printf("%x ", char)
+	}
+	fmt.Printf("\n")
 	fmt.Printf("major = %d, minior = %d\n", major_version, minor_version)
 	fmt.Printf("constant_pool_count = %d\n", constant_pool_count)
 
@@ -252,7 +262,7 @@ func main() {
 	fmt.Printf("fields_count=%d\n", fields_count)
 	fmt.Printf("methods_count=%d\n", methods_count)
 
-	for i:=0;i<methods_count;i++ {
+	for i:=u2(0);i<methods_count;i++ {
 		methodInfo := methods[i]
 		entry := getFromCPool(entries, methodInfo.name_index)
 		cutf8, ok := entry.(*ConstantUTF8)
@@ -265,6 +275,6 @@ func main() {
 	fmt.Printf("attribute=%v\n", attr)
 }
 
-func getFromCPool(entries []interface{}, i int) interface{} {
+func getFromCPool(entries []interface{}, i u2) interface{} {
 	return entries[i]
 }
