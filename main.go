@@ -42,6 +42,22 @@ type MethodInfo struct {
 	ai               []CodeAttribute
 }
 
+type ConstantClass struct {
+	tag byte
+	s   u2
+}
+
+type ConstantMethodfRef struct {
+	tag    byte
+	first  u2
+	second u2
+}
+
+type ConstantString struct {
+	tag byte
+	s   u2
+}
+
 type ConstantNameAndType struct {
 	tag    byte
 	first  u2
@@ -52,22 +68,6 @@ type ConstantUTF8 struct {
 	tag     byte
 	len     u2
 	content string
-}
-
-type ConstantClass struct {
-	tag byte
-	s   u2
-}
-
-type ConstantString struct {
-	tag byte
-	s   u2
-}
-
-type ConstantMethodfRef struct {
-	tag    byte
-	first  u2
-	second u2
 }
 
 func readCafebabe() [4]byte {
