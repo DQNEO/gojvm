@@ -178,8 +178,8 @@ func main() {
 		magic:readCafebabe(),
 	}
 
-	major_version := readU2()
 	minor_version := readU2()
+	major_version := readU2()
 	constant_pool_count := readU2()
 	var entries []interface{}
 	entries = append(entries, nil)
