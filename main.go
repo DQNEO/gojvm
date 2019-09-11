@@ -164,7 +164,20 @@ func readMethodInfo() MethodInfo {
 
 // https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-4.html#jvms-4.1
 type ClassFile struct {
-	magic [4]byte
+	magic               [4]byte
+	minor_version       u2
+	major_version       u2
+	constant_pool_count u2
+	constant_pool       []interface{}
+	access_flags        u2
+	this_class          u2
+	super_class         u2
+	interface_count     u2
+	fields_count        u2
+	methods_count       u2
+	methods         []MethodInfo
+	attributes_count u2
+	attributes []AttributeInfo
 }
 
 func main() {
@@ -174,16 +187,14 @@ func main() {
 		panic(err)
 	}
 
-	cf := ClassFile{
-		magic:readCafebabe(),
-	}
-
+	magic := readCafebabe()
 	minor_version := readU2()
 	major_version := readU2()
 	constant_pool_count := readU2()
-	var entries []interface{}
-	entries = append(entries, nil)
-	for i:=u2(0); i< constant_pool_count -1 ; i++ {
+
+	var constant_pool []interface{}
+	constant_pool = append(constant_pool, nil)
+	for i:= u2(0); i< constant_pool_count -1 ; i++ {
 		tag := readByte()
 		//fmt.Printf("[i=%d] tag=%02X\n", i, tag)
 		var e interface{}
@@ -221,7 +232,7 @@ func main() {
 			panic("unknown tag")
 		}
 		//e.tag = tag
-		entries = append(entries, e)
+		constant_pool = append(constant_pool, e)
 	}
 
 	access_flags := readU2()
@@ -237,9 +248,30 @@ func main() {
 		methods[i] = methodInfo
 	}
 	attributes_count := readU2()
-	attr := readAttributeInfo()
+	var attributes []AttributeInfo
+	for i:= u2(0);i<attributes_count;i++ {
+		attr := readAttributeInfo()
+		attributes = append(attributes, attr)
+	}
 	if len(bytes) == byteIndex {
 		fmt.Printf("__EOF__\n")
+	}
+
+	cf := ClassFile{
+		magic:               magic,
+		minor_version:       minor_version,
+		major_version:       major_version,
+		constant_pool_count: constant_pool_count,
+		constant_pool:       constant_pool,
+		access_flags:        access_flags,
+		this_class:          this_class,
+		super_class:         super_class,
+		interface_count:     interface_count,
+		fields_count:        fields_count,
+		methods_count:       methods_count,
+		methods:methods,
+		attributes_count:attributes_count,
+		attributes:attributes,
 	}
 
 	for _, char := range cf.magic {
@@ -249,8 +281,8 @@ func main() {
 	fmt.Printf("major = %d, minior = %d\n", major_version, minor_version)
 	fmt.Printf("constant_pool_count = %d\n", constant_pool_count)
 
-	fmt.Printf("Entries=%d\n", len(entries) -1)
-	for i, e := range entries {
+	fmt.Printf("Entries=%d\n", len(constant_pool) -1)
+	for i, e := range constant_pool {
 		fmt.Printf("[%d] Entry=%#v\n", i, e)
 	}
 
@@ -264,7 +296,7 @@ func main() {
 
 	for i:=u2(0);i<methods_count;i++ {
 		methodInfo := methods[i]
-		entry := getFromCPool(entries, methodInfo.name_index)
+		entry := getFromCPool(constant_pool, methodInfo.name_index)
 		cutf8, ok := entry.(*ConstantUTF8)
 		if !ok {
 			panic("not ConstantUTF8")
@@ -272,7 +304,7 @@ func main() {
 		fmt.Printf("methodInfo '%s'=%v\n", cutf8.content, methodInfo)
 	}
 	fmt.Printf("attributes_count=%d\n", attributes_count)
-	fmt.Printf("attribute=%v\n", attr)
+	fmt.Printf("attribute=%v\n", attributes[0])
 }
 
 func getFromCPool(entries []interface{}, i u2) interface{} {
