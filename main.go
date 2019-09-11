@@ -43,31 +43,31 @@ type MethodInfo struct {
 }
 
 type CONSTANT_Class_info struct {
-	tag byte
-	s   u2
+	tag        u1
+	name_index u2
 }
 
 type CONSTANT_Methodref_info struct {
-	tag    byte
-	first  u2
-	second u2
+	tag                 u1
+	class_index         u2
+	name_and_type_index u2
 }
 
 type CONSTANT_String_info struct {
-	tag byte
-	s   u2
+	tag          u1
+	string_index u2
 }
 
 type CONSTANT_NameAndType_info struct {
-	tag    byte
-	first  u2
-	second u2
+	tag              u1
+	name_index       u2
+	descriptor_index u2
 }
 
 type CONSTANT_Utf8_info struct {
-	tag     byte
-	len     u2
-	content string
+	tag    u1
+	length u2
+	bytes  string
 }
 
 func readCafebabe() [4]byte {
@@ -75,6 +75,7 @@ func readCafebabe() [4]byte {
 	return [4]byte{bytes[0], bytes[1], bytes[2], bytes[3]}
 }
 
+type u1 byte
 type u2 uint16
 type u4 uint32
 
@@ -100,10 +101,10 @@ func readBytes(n int) []byte {
 	byteIndex += n
 	return r
 }
-func readByte() byte {
+func readByte() u1 {
 	b := bytes[byteIndex]
 	byteIndex++
-	return b
+	return u1(b)
 }
 
 func readAttributeInfo() AttributeInfo {
@@ -198,32 +199,32 @@ func parseClassFile(filename string) *ClassFile {
 		switch tag {
 		case 0x0a, 0x09:
 			e = &CONSTANT_Methodref_info{
-				first:  readU2(),
-				second: readU2(),
-				tag:    tag,
+				class_index:         readU2(),
+				name_and_type_index: readU2(),
+				tag:                 tag,
 			}
 		case 0x08:
 			e = &CONSTANT_String_info{
-				s:   readU2(),
-				tag: tag,
+				string_index: readU2(),
+				tag:          tag,
 			}
 		case 0x07:
 			e = &CONSTANT_Class_info{
-				s:   readU2(),
-				tag: tag,
+				name_index: readU2(),
+				tag:        tag,
 			}
 		case 0x01:
 			ln := readU2()
 			e = &CONSTANT_Utf8_info{
-				tag:     tag,
-				len:     ln,
-				content: string(readBytes(int(ln))),
+				tag:    tag,
+				length: ln,
+				bytes:  string(readBytes(int(ln))),
 			}
 		case 0x0c:
 			e = &CONSTANT_NameAndType_info{
-				first:  readU2(),
-				second: readU2(),
-				tag:    tag,
+				name_index:       readU2(),
+				descriptor_index: readU2(),
+				tag:              tag,
 			}
 		default:
 			panic("unknown tag")
@@ -301,7 +302,7 @@ func debugClassFile(cf *ClassFile) {
 		if !ok {
 			panic("not CONSTANT_Utf8_info")
 		}
-		fmt.Printf("methodInfo '%s'=%v\n", cutf8.content, methodInfo)
+		fmt.Printf("methodInfo '%string_index'=%v\n", cutf8.bytes, methodInfo)
 	}
 	fmt.Printf("attributes_count=%d\n", cf.attributes_count)
 	fmt.Printf("attribute=%v\n", cf.attributes[0])
