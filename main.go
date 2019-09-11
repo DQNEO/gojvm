@@ -42,29 +42,29 @@ type MethodInfo struct {
 	ai               []CodeAttribute
 }
 
-type ConstantClass struct {
+type CONSTANT_Class_info struct {
 	tag byte
 	s   u2
 }
 
-type ConstantMethodfRef struct {
+type CONSTANT_Methodref_info struct {
 	tag    byte
 	first  u2
 	second u2
 }
 
-type ConstantString struct {
+type CONSTANT_String_info struct {
 	tag byte
 	s   u2
 }
 
-type ConstantNameAndType struct {
+type CONSTANT_NameAndType_info struct {
 	tag    byte
 	first  u2
 	second u2
 }
 
-type ConstantUTF8 struct {
+type CONSTANT_Utf8_info struct {
 	tag     byte
 	len     u2
 	content string
@@ -197,30 +197,30 @@ func parseClassFile(filename string) *ClassFile {
 		var e interface{}
 		switch tag {
 		case 0x0a, 0x09:
-			e = &ConstantMethodfRef{
+			e = &CONSTANT_Methodref_info{
 				first:  readU2(),
 				second: readU2(),
 				tag:    tag,
 			}
 		case 0x08:
-			e = &ConstantString{
+			e = &CONSTANT_String_info{
 				s:   readU2(),
 				tag: tag,
 			}
 		case 0x07:
-			e = &ConstantClass{
+			e = &CONSTANT_Class_info{
 				s:   readU2(),
 				tag: tag,
 			}
 		case 0x01:
 			ln := readU2()
-			e = &ConstantUTF8{
+			e = &CONSTANT_Utf8_info{
 				tag:     tag,
 				len:     ln,
 				content: string(readBytes(int(ln))),
 			}
 		case 0x0c:
-			e = &ConstantNameAndType{
+			e = &CONSTANT_NameAndType_info{
 				first:  readU2(),
 				second: readU2(),
 				tag:    tag,
@@ -297,9 +297,9 @@ func debugClassFile(cf *ClassFile) {
 	for i := u2(0); i < cf.methods_count; i++ {
 		methodInfo := cf.methods[i]
 		entry := getFromCPool(cf.constant_pool, methodInfo.name_index)
-		cutf8, ok := entry.(*ConstantUTF8)
+		cutf8, ok := entry.(*CONSTANT_Utf8_info)
 		if !ok {
-			panic("not ConstantUTF8")
+			panic("not CONSTANT_Utf8_info")
 		}
 		fmt.Printf("methodInfo '%s'=%v\n", cutf8.content, methodInfo)
 	}
