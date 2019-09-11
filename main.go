@@ -188,22 +188,7 @@ type AttributeInfo struct {
 	attribute_length int // u4
 	body []byte
 }
-type CodeAttribute struct {
-	a int // u2
-	b int // u4
-	c int // u2
-	d int // u2
-	e int // u4
-	f byte // u1
-	g int // u2
-	// exception
-	e1 int //
-	e2 int //
-	e3 int //
-	e4 int //
-	ac int // u2
-	as []LineAttribute
-}
+
 type MethodInfo struct {
 	access_flags     int
 	name_index       int
