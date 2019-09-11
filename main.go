@@ -8,32 +8,31 @@ import (
 var bytes []byte
 var byteIndex int = 0
 
-
 type ExceptionTable struct {
-	start_pc u2
-	end_pc u2
+	start_pc   u2
+	end_pc     u2
 	handler_pc u2
 	catch_type u2
 }
 
 type CodeAttribute struct {
-	attribute_name_index u2
-	attribute_length u4
-	max_stqck u2
-	max_locals u2
-	code_length u4
-	code []byte
+	attribute_name_index   u2
+	attribute_length       u4
+	max_stqck              u2
+	max_locals             u2
+	code_length            u4
+	code                   []byte
 	exception_table_length u2
-	exception_tables []ExceptionTable
-	attributes_count u2
-	attribute_infos []AttributeInfo
+	exception_tables       []ExceptionTable
+	attributes_count       u2
+	attribute_infos        []AttributeInfo
 	//body []byte
 }
 
 type AttributeInfo struct {
 	attribute_name_index u2
-	attribute_length u4
-	body []byte
+	attribute_length     u4
+	body                 []byte
 }
 
 type MethodInfo struct {
@@ -41,41 +40,40 @@ type MethodInfo struct {
 	name_index       u2
 	descriptor_index u2
 	attributes_count u2
-	ai    []CodeAttribute
+	ai               []CodeAttribute
 }
 
 type ConstantNameAndType struct {
-	tag byte
-	first u2
+	tag    byte
+	first  u2
 	second u2
 }
 
 type ConstantUTF8 struct {
-	tag byte
-	len u2
+	tag     byte
+	len     u2
 	content string
 }
 
 type ConstantClass struct {
 	tag byte
-	s u2
+	s   u2
 }
-
 
 type ConstantString struct {
 	tag byte
-	s u2
+	s   u2
 }
 
 type ConstantMethodfRef struct {
-	tag byte
-	first u2
+	tag    byte
+	first  u2
 	second u2
 }
 
 func readCafebabe() [4]byte {
 	byteIndex += 4
-	return [4]byte{bytes[0],bytes[1], bytes[2],bytes[3]}
+	return [4]byte{bytes[0], bytes[1], bytes[2], bytes[3]}
 }
 
 type u2 uint16
@@ -86,7 +84,7 @@ func readU2() u2 {
 	right := bytes[byteIndex+1]
 	byteIndex += 2
 
-	return u2(u2(left) * 256 + u2(right))
+	return u2(u2(left)*256 + u2(right))
 }
 func readU4() u4 {
 	b1 := bytes[byteIndex]
@@ -95,11 +93,11 @@ func readU4() u4 {
 	b4 := bytes[byteIndex+3]
 	byteIndex += 4
 
-	return u4(u4(b1) * 256 * 256 * 256 + u4(b2) * 256 * 256 + u4(b3) * 256 + u4(b4))
+	return u4(u4(b1)*256*256*256 + u4(b2)*256*256 + u4(b3)*256 + u4(b4))
 }
 
 func readBytes(n int) []byte {
-	r := bytes[byteIndex:byteIndex+n]
+	r := bytes[byteIndex : byteIndex+n]
 	byteIndex += n
 	return r
 }
@@ -135,11 +133,11 @@ func readCodeAttribute() CodeAttribute {
 	}
 	a.code = readBytes(int(a.code_length))
 	a.exception_table_length = readU2()
-	for i:=u2(0);i<a.exception_table_length;i++ {
+	for i := u2(0); i < a.exception_table_length; i++ {
 		readExceptionTable()
 	}
 	a.attributes_count = readU2()
-	for i:=u2(0);i<a.attributes_count;i++ {
+	for i := u2(0); i < a.attributes_count; i++ {
 		readAttributeInfo()
 	}
 	return a
@@ -153,7 +151,7 @@ func readMethodInfo() MethodInfo {
 		attributes_count: readU2(),
 	}
 	var cas []CodeAttribute
-	for i:=u2(0);i<methodInfo.attributes_count; i++ {
+	for i := u2(0); i < methodInfo.attributes_count; i++ {
 		ca := readCodeAttribute()
 		cas = append(cas, ca)
 	}
@@ -175,9 +173,9 @@ type ClassFile struct {
 	interface_count     u2
 	fields_count        u2
 	methods_count       u2
-	methods         []MethodInfo
-	attributes_count u2
-	attributes []AttributeInfo
+	methods             []MethodInfo
+	attributes_count    u2
+	attributes          []AttributeInfo
 }
 
 func parseClassFile(filename string) *ClassFile {
@@ -194,7 +192,7 @@ func parseClassFile(filename string) *ClassFile {
 
 	var constant_pool []interface{}
 	constant_pool = append(constant_pool, nil)
-	for i:= u2(0); i< constant_pool_count -1 ; i++ {
+	for i := u2(0); i < constant_pool_count-1; i++ {
 		tag := readByte()
 		//fmt.Printf("[i=%d] tag=%02X\n", i, tag)
 		var e interface{}
@@ -218,8 +216,8 @@ func parseClassFile(filename string) *ClassFile {
 		case 0x01:
 			ln := readU2()
 			e = &ConstantUTF8{
-				tag:tag,
-				len: ln,
+				tag:     tag,
+				len:     ln,
 				content: string(readBytes(int(ln))),
 			}
 		case 0x0c:
@@ -243,13 +241,13 @@ func parseClassFile(filename string) *ClassFile {
 	methods_count := readU2()
 
 	var methods []MethodInfo = make([]MethodInfo, methods_count)
-	for i := u2(0);i<methods_count;i++ {
+	for i := u2(0); i < methods_count; i++ {
 		methodInfo := readMethodInfo()
 		methods[i] = methodInfo
 	}
 	attributes_count := readU2()
 	var attributes []AttributeInfo
-	for i:= u2(0);i<attributes_count;i++ {
+	for i := u2(0); i < attributes_count; i++ {
 		attr := readAttributeInfo()
 		attributes = append(attributes, attr)
 	}
@@ -269,9 +267,9 @@ func parseClassFile(filename string) *ClassFile {
 		interface_count:     interface_count,
 		fields_count:        fields_count,
 		methods_count:       methods_count,
-		methods:methods,
-		attributes_count:attributes_count,
-		attributes:attributes,
+		methods:             methods,
+		attributes_count:    attributes_count,
+		attributes:          attributes,
 	}
 }
 
@@ -284,7 +282,7 @@ func debugClassFile(cf *ClassFile) {
 	fmt.Printf("major = %d, minior = %d\n", cf.major_version, cf.minor_version)
 	fmt.Printf("constant_pool_count = %d\n", cf.constant_pool_count)
 
-	fmt.Printf("Entries=%d\n", len(cf.constant_pool) -1)
+	fmt.Printf("Entries=%d\n", len(cf.constant_pool)-1)
 	for i, e := range cf.constant_pool {
 		fmt.Printf("[%d] Entry=%#v\n", i, e)
 	}
@@ -297,7 +295,7 @@ func debugClassFile(cf *ClassFile) {
 	fmt.Printf("fields_count=%d\n", cf.fields_count)
 	fmt.Printf("methods_count=%d\n", cf.methods_count)
 
-	for i:=u2(0);i<cf.methods_count;i++ {
+	for i := u2(0); i < cf.methods_count; i++ {
 		methodInfo := cf.methods[i]
 		entry := getFromCPool(cf.constant_pool, methodInfo.name_index)
 		cutf8, ok := entry.(*ConstantUTF8)
