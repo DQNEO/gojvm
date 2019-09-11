@@ -15,6 +15,27 @@ type LineAttribute struct {
 	c int // u2
 }
 
+type ExceptionTable struct {
+	start_pc int // u2
+	end_pc int // u2
+	handler_pc int //u2
+	catch_type int // u2
+}
+
+type CodeAttribute struct {
+	attribute_name_index int // u2
+	attribute_length int // u4
+	max_stqck int // u2
+	max_locals int // u2
+	code_length int // u4
+	code []byte
+	exception_table_length int // u2
+	exception_tables []ExceptionTable
+	attributes_count int // u2
+	attribute_infos []AttributeInfo
+	//body []byte
+}
+
 type AttributeInfo struct {
 	attribute_name_index int // u2
 	attribute_length int // u4
@@ -26,7 +47,7 @@ type MethodInfo struct {
 	name_index       int
 	descriptor_index int
 	attributes_count int
-	ai    []AttributeInfo
+	ai    []CodeAttribute
 }
 
 type ConstantNameAndType struct {
@@ -110,6 +131,33 @@ func readAttributeInfo() AttributeInfo {
 	return a
 }
 
+func readExceptionTable() {
+	readU2()
+	readU2()
+	readU2()
+	readU2()
+}
+
+func readCodeAttribute() CodeAttribute {
+	a := CodeAttribute{
+		attribute_name_index: readU2(),
+		attribute_length: readU4(),
+		max_stqck:readU2(),
+		max_locals:readU2(),
+		code_length:readU4(),
+	}
+	a.code = readBytes(a.code_length)
+	a.exception_table_length = readU2()
+	for i:=0;i<a.exception_table_length;i++ {
+		readExceptionTable()
+	}
+	a.attributes_count = readU2()
+	for i:=0;i<a.attributes_count;i++ {
+		readAttributeInfo()
+	}
+	return a
+}
+
 func readMethodInfo() MethodInfo {
 	methodInfo := MethodInfo{
 		access_flags:     readU2(),
@@ -117,9 +165,9 @@ func readMethodInfo() MethodInfo {
 		descriptor_index: readU2(),
 		attributes_count: readU2(),
 	}
-	var cas []AttributeInfo
-	for i:=0;i<methodInfo.attributes_count;i++ {
-		ca := readAttributeInfo()
+	var cas []CodeAttribute
+	for i:=0;i<methodInfo.attributes_count; i++ {
+		ca := readCodeAttribute()
 		cas = append(cas, ca)
 	}
 	methodInfo.ai = cas
