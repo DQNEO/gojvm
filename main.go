@@ -180,9 +180,9 @@ type ClassFile struct {
 	attributes []AttributeInfo
 }
 
-func main() {
+func parseClassFile(filename string) *ClassFile {
 	var err error
-	bytes, err = ioutil.ReadFile("HelloWorld.class")
+	bytes, err = ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
@@ -257,7 +257,7 @@ func main() {
 		fmt.Printf("__EOF__\n")
 	}
 
-	cf := ClassFile{
+	return &ClassFile{
 		magic:               magic,
 		minor_version:       minor_version,
 		major_version:       major_version,
@@ -273,38 +273,46 @@ func main() {
 		attributes_count:attributes_count,
 		attributes:attributes,
 	}
+}
 
+func debugClassFile(cf *ClassFile) {
 	for _, char := range cf.magic {
 		fmt.Printf("%x ", char)
 	}
-	fmt.Printf("\n")
-	fmt.Printf("major = %d, minior = %d\n", major_version, minor_version)
-	fmt.Printf("constant_pool_count = %d\n", constant_pool_count)
 
-	fmt.Printf("Entries=%d\n", len(constant_pool) -1)
-	for i, e := range constant_pool {
+	fmt.Printf("\n")
+	fmt.Printf("major = %d, minior = %d\n", cf.major_version, cf.minor_version)
+	fmt.Printf("constant_pool_count = %d\n", cf.constant_pool_count)
+
+	fmt.Printf("Entries=%d\n", len(cf.constant_pool) -1)
+	for i, e := range cf.constant_pool {
 		fmt.Printf("[%d] Entry=%#v\n", i, e)
 	}
 
-	fmt.Printf("access_flags=%d\n", access_flags)
-	fmt.Printf("this_class=%d\n", this_class)
-	fmt.Printf("super_class=%d\n", super_class)
-	fmt.Printf("interface_count=%d\n", interface_count)
+	fmt.Printf("access_flags=%d\n", cf.access_flags)
+	fmt.Printf("this_class=%d\n", cf.this_class)
+	fmt.Printf("super_class=%d\n", cf.super_class)
+	fmt.Printf("interface_count=%d\n", cf.interface_count)
 	//fmt.Printf("interfaces=%d\n", interfaces)
-	fmt.Printf("fields_count=%d\n", fields_count)
-	fmt.Printf("methods_count=%d\n", methods_count)
+	fmt.Printf("fields_count=%d\n", cf.fields_count)
+	fmt.Printf("methods_count=%d\n", cf.methods_count)
 
-	for i:=u2(0);i<methods_count;i++ {
-		methodInfo := methods[i]
-		entry := getFromCPool(constant_pool, methodInfo.name_index)
+	for i:=u2(0);i<cf.methods_count;i++ {
+		methodInfo := cf.methods[i]
+		entry := getFromCPool(cf.constant_pool, methodInfo.name_index)
 		cutf8, ok := entry.(*ConstantUTF8)
 		if !ok {
 			panic("not ConstantUTF8")
 		}
 		fmt.Printf("methodInfo '%s'=%v\n", cutf8.content, methodInfo)
 	}
-	fmt.Printf("attributes_count=%d\n", attributes_count)
-	fmt.Printf("attribute=%v\n", attributes[0])
+	fmt.Printf("attributes_count=%d\n", cf.attributes_count)
+	fmt.Printf("attribute=%v\n", cf.attributes[0])
+}
+
+func main() {
+	cf := parseClassFile("HelloWorld.class")
+	debugClassFile(cf)
 }
 
 func getFromCPool(entries []interface{}, i u2) interface{} {
