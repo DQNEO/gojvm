@@ -9,12 +9,6 @@ var bytes []byte
 var byteIndex int = 0
 
 
-type LineAttribute struct {
-	a int // u2
-	b int // u4
-	c int // u2
-}
-
 type ExceptionTable struct {
 	start_pc int // u2
 	end_pc int // u2
@@ -111,15 +105,6 @@ func readByte() byte {
 	b := bytes[byteIndex]
 	byteIndex++
 	return b
-}
-
-func readAttribute() LineAttribute {
-	at := LineAttribute{
-		a: readU2(),
-		b: readU4(),
-		c: readU2(),
-	}
-	return at
 }
 
 func readAttributeInfo() AttributeInfo {
