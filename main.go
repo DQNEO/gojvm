@@ -21,6 +21,16 @@ func readU2() int {
 	return int(int(left) * 256 + int(right))
 }
 
+func readU4() int {
+	b1 := bytes[byteIndex]
+	b2 := bytes[byteIndex+1]
+	b3 := bytes[byteIndex+2]
+	b4 := bytes[byteIndex+3]
+	byteIndex += 4
+
+	return int(int(b1) * 256 * 256 * 256 + int(b2) * 256 * 256 + int(b3) * 256 + int(b4))
+}
+
 func readBytes(n int) []byte {
 	r := bytes[byteIndex:byteIndex+n]
 	byteIndex += n
@@ -32,6 +42,40 @@ func readByte() byte {
 	return b
 }
 
+func readAttribute() LineAttribute {
+	at := LineAttribute{
+		a: readU2(),
+		b: readU4(),
+		c: readU2(),
+	}
+	return at
+}
+
+func readAttributeInfo() AttributeInfo {
+	a := AttributeInfo{
+		attribute_name_index: readU2(),
+		attribute_length: readU4(),
+	}
+	a.body = readBytes(a.attribute_length)
+	return a
+}
+
+func readMethodInfo() MethodInfo {
+	methodInfo := MethodInfo{
+		access_flags:     readU2(),
+		name_index:       readU2(),
+		descriptor_index: readU2(),
+		attributes_count: readU2(),
+	}
+	var cas []AttributeInfo
+	for i:=0;i<methodInfo.attributes_count;i++ {
+		ca := readAttributeInfo()
+		cas = append(cas, ca)
+	}
+	methodInfo.ai = cas
+
+	return methodInfo
+}
 func main() {
 	var err error
 	bytes, err = ioutil.ReadFile("HelloWorld.class")
@@ -49,7 +93,8 @@ func main() {
 	fmt.Printf("major = %d, minior = %d\n", major_version, minor_version)
 	fmt.Printf("constant_pool_count = %d\n", constant_pool_count)
 	var entries []interface{}
-	for i:=0; i< constant_pool_count -1; i++ {
+	entries = append(entries, nil)
+	for i:=0; i< constant_pool_count -1 ; i++ {
 		tag := readByte()
 		fmt.Printf("[i=%d] tag=%02X\n", i, tag)
 		var e interface{}
@@ -84,23 +129,93 @@ func main() {
 				tag:tag,
 			}
 		default:
-			readByte()
+			panic("unknown tag")
 		}
 		//e.tag = tag
 		entries = append(entries, e)
 	}
 
-	fmt.Printf("Entries=%d\n", len(entries))
-	for _, e := range entries {
-		fmt.Printf("Entry=%#v\n", e)
+	fmt.Printf("Entries=%d\n", len(entries) -1)
+	for i, e := range entries {
+		fmt.Printf("[%d] Entry=%#v\n", i, e)
 	}
+
+	access_flags := readU2()
+	this_class := readU2()
+	super_class := readU2()
+	interface_count := readU2()
+	//interfaces := readU2()
+	fields_count := readU2()
+	methods_count := readU2()
+	fmt.Printf("access_flags=%d\n", access_flags)
+	fmt.Printf("this_class=%d\n", this_class)
+	fmt.Printf("super_class=%d\n", super_class)
+	fmt.Printf("interface_count=%d\n", interface_count)
+	//fmt.Printf("interfaces=%d\n", interfaces)
+	fmt.Printf("fields_count=%d\n", fields_count)
+	fmt.Printf("methods_count=%d\n", methods_count)
+
+	for i:=0;i<methods_count;i++ {
+		methodInfo := readMethodInfo()
+		entry := getFromCPool(entries, methodInfo.name_index)
+		cutf8, ok := entry.(*ConstantUTF8)
+		if !ok {
+			panic("not ConstantUTF8")
+		}
+		fmt.Printf("methodInfo '%s'=%v\n", cutf8.content, methodInfo)
+	}
+	attributes_count := readU2()
+	fmt.Printf("attributes_count=%d\n", attributes_count)
+	attr := readAttributeInfo()
+	fmt.Printf("attribute=%v\n", attr)
+	if len(bytes) == byteIndex {
+		fmt.Printf("__EOF__\n")
+	}
+}
+
+func getFromCPool(entries []interface{}, i int) interface{} {
+	return entries[i]
+}
+
+type LineAttribute struct {
+	a int // u2
+	b int // u4
+	c int // u2
+}
+
+type AttributeInfo struct {
+	attribute_name_index int // u2
+	attribute_length int // u4
+	body []byte
+}
+type CodeAttribute struct {
+	a int // u2
+	b int // u4
+	c int // u2
+	d int // u2
+	e int // u4
+	f byte // u1
+	g int // u2
+	// exception
+	e1 int //
+	e2 int //
+	e3 int //
+	e4 int //
+	ac int // u2
+	as []LineAttribute
+}
+type MethodInfo struct {
+	access_flags     int
+	name_index       int
+	descriptor_index int
+	attributes_count int
+	ai    []AttributeInfo
 }
 
 type ConstantNameAndType struct {
 	tag byte
 	first int
 	second int
-
 }
 
 type ConstantUTF8 struct {
