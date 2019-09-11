@@ -8,6 +8,56 @@ import (
 var bytes []byte
 var byteIndex int = 0
 
+
+type LineAttribute struct {
+	a int // u2
+	b int // u4
+	c int // u2
+}
+
+type AttributeInfo struct {
+	attribute_name_index int // u2
+	attribute_length int // u4
+	body []byte
+}
+
+type MethodInfo struct {
+	access_flags     int
+	name_index       int
+	descriptor_index int
+	attributes_count int
+	ai    []AttributeInfo
+}
+
+type ConstantNameAndType struct {
+	tag byte
+	first int
+	second int
+}
+
+type ConstantUTF8 struct {
+	tag byte
+	len int
+	content string
+}
+
+type ConstantClass struct {
+	tag byte
+	s int
+}
+
+
+type ConstantString struct {
+	tag byte
+	s int
+}
+
+type ConstantMethodfRef struct {
+	tag byte
+	first int
+	second int
+}
+
 func readCafebabe() []byte {
 	byteIndex += 4
 	return bytes[0:4]
@@ -175,53 +225,4 @@ func main() {
 
 func getFromCPool(entries []interface{}, i int) interface{} {
 	return entries[i]
-}
-
-type LineAttribute struct {
-	a int // u2
-	b int // u4
-	c int // u2
-}
-
-type AttributeInfo struct {
-	attribute_name_index int // u2
-	attribute_length int // u4
-	body []byte
-}
-
-type MethodInfo struct {
-	access_flags     int
-	name_index       int
-	descriptor_index int
-	attributes_count int
-	ai    []AttributeInfo
-}
-
-type ConstantNameAndType struct {
-	tag byte
-	first int
-	second int
-}
-
-type ConstantUTF8 struct {
-	tag byte
-	len int
-	content string
-}
-
-type ConstantClass struct {
-	tag byte
-	s int
-}
-
-
-type ConstantString struct {
-	tag byte
-	s int
-}
-
-type ConstantMethodfRef struct {
-	tag byte
-	first int
-	second int
 }
