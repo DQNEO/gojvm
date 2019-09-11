@@ -26,7 +26,6 @@ type CodeAttribute struct {
 	exception_tables       []ExceptionTable
 	attributes_count       u2
 	attribute_infos        []AttributeInfo
-	//body []byte
 }
 
 type AttributeInfo struct {
