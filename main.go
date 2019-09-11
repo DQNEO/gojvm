@@ -159,6 +159,7 @@ func readMethodInfo() MethodInfo {
 
 	return methodInfo
 }
+
 func main() {
 	var err error
 	bytes, err = ioutil.ReadFile("HelloWorld.class")
@@ -173,13 +174,11 @@ func main() {
 	major_version := readU2()
 	minor_version := readU2()
 	constant_pool_count := readU2()
-	fmt.Printf("major = %d, minior = %d\n", major_version, minor_version)
-	fmt.Printf("constant_pool_count = %d\n", constant_pool_count)
 	var entries []interface{}
 	entries = append(entries, nil)
 	for i:=0; i< constant_pool_count -1 ; i++ {
 		tag := readByte()
-		fmt.Printf("[i=%d] tag=%02X\n", i, tag)
+		//fmt.Printf("[i=%d] tag=%02X\n", i, tag)
 		var e interface{}
 		switch tag {
 		case 0x0a, 0x09:
@@ -218,11 +217,6 @@ func main() {
 		entries = append(entries, e)
 	}
 
-	fmt.Printf("Entries=%d\n", len(entries) -1)
-	for i, e := range entries {
-		fmt.Printf("[%d] Entry=%#v\n", i, e)
-	}
-
 	access_flags := readU2()
 	this_class := readU2()
 	super_class := readU2()
@@ -230,6 +224,26 @@ func main() {
 	//interfaces := readU2()
 	fields_count := readU2()
 	methods_count := readU2()
+
+	var methods []MethodInfo = make([]MethodInfo, methods_count)
+	for i:=0;i<methods_count;i++ {
+		methodInfo := readMethodInfo()
+		methods[i] = methodInfo
+	}
+	attributes_count := readU2()
+	attr := readAttributeInfo()
+	if len(bytes) == byteIndex {
+		fmt.Printf("__EOF__\n")
+	}
+
+	fmt.Printf("major = %d, minior = %d\n", major_version, minor_version)
+	fmt.Printf("constant_pool_count = %d\n", constant_pool_count)
+
+	fmt.Printf("Entries=%d\n", len(entries) -1)
+	for i, e := range entries {
+		fmt.Printf("[%d] Entry=%#v\n", i, e)
+	}
+
 	fmt.Printf("access_flags=%d\n", access_flags)
 	fmt.Printf("this_class=%d\n", this_class)
 	fmt.Printf("super_class=%d\n", super_class)
@@ -239,7 +253,7 @@ func main() {
 	fmt.Printf("methods_count=%d\n", methods_count)
 
 	for i:=0;i<methods_count;i++ {
-		methodInfo := readMethodInfo()
+		methodInfo := methods[i]
 		entry := getFromCPool(entries, methodInfo.name_index)
 		cutf8, ok := entry.(*ConstantUTF8)
 		if !ok {
@@ -247,13 +261,8 @@ func main() {
 		}
 		fmt.Printf("methodInfo '%s'=%v\n", cutf8.content, methodInfo)
 	}
-	attributes_count := readU2()
 	fmt.Printf("attributes_count=%d\n", attributes_count)
-	attr := readAttributeInfo()
 	fmt.Printf("attribute=%v\n", attr)
-	if len(bytes) == byteIndex {
-		fmt.Printf("__EOF__\n")
-	}
 }
 
 func getFromCPool(entries []interface{}, i int) interface{} {
