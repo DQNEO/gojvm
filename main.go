@@ -166,13 +166,15 @@ func readMethodInfo() MethodInfo {
 	return methodInfo
 }
 
+type ConstantPool []interface{}
+
 // https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-4.html#jvms-4.1
 type ClassFile struct {
 	magic               [4]byte
 	minor_version       u2
 	major_version       u2
 	constant_pool_count u2
-	constant_pool       []interface{}
+	constant_pool       ConstantPool
 	access_flags        u2
 	this_class          u2
 	super_class         u2
@@ -316,6 +318,19 @@ func debugConstantPool(cp []interface{}) {
 
 }
 
+func (cp ConstantPool) get(i u2) interface{} {
+	return cp[i]
+}
+
+func (cp ConstantPool) getClassInfo(id u2) *CONSTANT_Class_info {
+	entry := cp.get(id)
+	ci, ok := entry.(*CONSTANT_Class_info)
+	if !ok {
+		panic("type mismatch")
+	}
+	return ci
+}
+
 func debugClassFile(cf *ClassFile) {
 	for _, char := range cf.magic {
 		fmt.Printf("%x ", char)
@@ -337,7 +352,7 @@ func debugClassFile(cf *ClassFile) {
 
 	for i := u2(0); i < cf.methods_count; i++ {
 		methodInfo := cf.methods[i]
-		entry := getFromCPool(cf.constant_pool, methodInfo.name_index)
+		entry := cf.constant_pool.get(methodInfo.name_index)
 		cutf8, ok := entry.(*CONSTANT_Utf8_info)
 		if !ok {
 			panic("not CONSTANT_Utf8_info")
@@ -359,6 +374,3 @@ func main() {
 	debugClassFile(cf)
 }
 
-func getFromCPool(cp []interface{}, i u2) interface{} {
-	return cp[i]
-}
