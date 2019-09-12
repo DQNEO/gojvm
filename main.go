@@ -322,9 +322,7 @@ func debugClassFile(cf *ClassFile) {
 	}
 
 	fmt.Printf("\n")
-	fmt.Printf("major = %d, minior = %d\n", cf.major_version, cf.minor_version)
-	fmt.Printf("constant_pool_count = %d\n", cf.constant_pool_count)
-
+	fmt.Printf("major_version = %d, minior_version = %d\n", cf.major_version, cf.minor_version)
 	fmt.Printf("Constant pool:\n")
 	debugConstantPool(cf.constant_pool)
 
@@ -343,7 +341,13 @@ func debugClassFile(cf *ClassFile) {
 		if !ok {
 			panic("not CONSTANT_Utf8_info")
 		}
-		fmt.Printf("methodInfo '%string_index'=%v\n", cutf8.bytes, methodInfo)
+		fmt.Printf(" %s:\n", cutf8.bytes)
+		for _, ca  := range methodInfo.ai {
+			for _, c := range ca.code {
+				fmt.Printf(" %x", c)
+			}
+		}
+		fmt.Printf("\n")
 	}
 	fmt.Printf("attributes_count=%d\n", cf.attributes_count)
 	fmt.Printf("attribute=%v\n", cf.attributes[0])
