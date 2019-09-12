@@ -206,7 +206,7 @@ func parseClassFile(filename string) *ClassFile {
 	constant_pool = append(constant_pool, nil)
 	for i := u2(0); i < constant_pool_count-1; i++ {
 		tag := readByte()
-		//fmt.Printf("#[i=%d] tag=%02X\n", i, tag)
+		//debugf("[i=%d] tag=%02X\n", i, tag)
 		var e interface{}
 		switch tag {
 		case 0x09:
@@ -270,7 +270,7 @@ func parseClassFile(filename string) *ClassFile {
 		attributes = append(attributes, attr)
 	}
 	if len(bytes) == byteIndex {
-		fmt.Printf("#__EOF__\n")
+		debugf("__EOF__\n")
 	}
 
 	return &ClassFile{
@@ -321,9 +321,9 @@ func debugConstantPool(cp []interface{})  {
 		if i == 0 {
 			continue
 		}
-		fmt.Printf("# #%02d = ",i)
+		debugf(" #%02d = ",i)
 		s := c2s(c)
-		fmt.Printf("#%s\n", s)
+		debugf("%s\n", s)
 	}
 }
 
@@ -387,36 +387,36 @@ func (cp ConstantPool) getUTF8Byttes(id u2) []byte {
 
 func debugClassFile(cf *ClassFile) {
 	for _, char := range cf.magic {
-		fmt.Printf("#%x ", char)
+		debugf("%x ", char)
 	}
 
-	fmt.Printf("#\n")
-	fmt.Printf("#major_version = %d, minior_version = %d\n", cf.major_version, cf.minor_version)
-	fmt.Printf("#access_flags=%d\n", cf.access_flags)
+	debugf("\n")
+	debugf("major_version = %d, minior_version = %d\n", cf.major_version, cf.minor_version)
+	debugf("access_flags=%d\n", cf.access_flags)
 	ci := cf.constant_pool.getClassInfo(cf.this_class)
-	fmt.Printf("#class %s\n", cf.constant_pool.getUTF8Byttes(ci.name_index))
-	fmt.Printf("#  super_class=%d\n", cf.super_class)
+	debugf("class %s\n", cf.constant_pool.getUTF8Byttes(ci.name_index))
+	debugf("  super_class=%d\n", cf.super_class)
 
-	fmt.Printf("#Constant pool:\n")
+	debugf("Constant pool:\n")
 	debugConstantPool(cf.constant_pool)
 
-	fmt.Printf("#interface_count=%d\n", cf.interface_count)
-	//fmt.Printf("#interfaces=%d\n", interfaces)
-	fmt.Printf("#fields_count=%d\n", cf.fields_count)
-	fmt.Printf("#methods_count=%d\n", cf.methods_count)
+	debugf("interface_count=%d\n", cf.interface_count)
+	//debugf("interfaces=%d\n", interfaces)
+	debugf("fields_count=%d\n", cf.fields_count)
+	debugf("methods_count=%d\n", cf.methods_count)
 
 	for _, methodInfo := range cf.methods{
 		methodName := cf.constant_pool.getUTF8Byttes(methodInfo.name_index)
-		fmt.Printf("# %s:\n", methodName)
+		debugf(" %s:\n", methodName)
 		for _, ca  := range methodInfo.ai {
 			for _, c := range ca.code {
-				fmt.Printf("# %02x", c)
+				debugf(" %02x", c)
 			}
 		}
-		fmt.Printf("#\n")
+		debugf("\n")
 	}
-	fmt.Printf("#attributes_count=%d\n", cf.attributes_count)
-	fmt.Printf("#attribute=%v\n", cf.attributes[0])
+	debugf("attributes_count=%d\n", cf.attributes_count)
+	debugf("attribute=%v\n", cf.attributes[0])
 }
 
 func getByte() byte {
@@ -439,60 +439,60 @@ func pop() interface{} {
 }
 
 func executeCode(code []byte) {
-	fmt.Printf("#len code=%d\n", len(code))
+	debugf("len code=%d\n", len(code))
 
 	byteIndex = 0
 	bytes = code
 	for _, b := range code {
-		fmt.Printf("#0x%x ", b)
+		debugf("0x%x ", b)
 	}
-	fmt.Printf("#\n")
+	debugf("\n")
 	for {
 		if byteIndex >= len(bytes) {
 			break
 		}
 		b := getByte()
-		fmt.Printf("#inst 0x%02x\n", b)
+		debugf("inst 0x%02x\n", b)
 		switch b {
 		case 0x12: // ldc
 			operand := readByte()
-			fmt.Printf("#  ldc 0x%02x\n", operand)
+			debugf("  ldc 0x%02x\n", operand)
 			push(operand)
 		case 0xb1: // return
-			fmt.Printf("#  return\n")
+			debugf("  return\n")
 			return
 		case 0xb2: // getstatic
 			operand := readU2()
-			fmt.Printf("#  getstatic 0x%02x\n", operand)
+			debugf("  getstatic 0x%02x\n", operand)
 			fieldref := cpool.getFieldref(operand)
 			cls := cpool.getClassInfo(fieldref.class_index)
 			className := cpool.getUTF8Byttes(cls.name_index)
 			nameAndType := cpool.getNameAndType(fieldref.name_and_type_index)
 			name := cpool.getUTF8Byttes(nameAndType.name_index)
 			desc := cpool.getUTF8Byttes(nameAndType.descriptor_index)
-			fmt.Printf("#   => %s#%s#%s#%s\n", c2s(fieldref), className, name, desc)
+			debugf("   => %s#%s#%s#%s\n", c2s(fieldref), className, name, desc)
 			push(operand)
 		case 0xb6: // invokevirtual
 			operand := readU2()
-			fmt.Printf("#  invokevirtual 0x%02x\n", operand)
+			debugf("  invokevirtual 0x%02x\n", operand)
 			methodRef := cpool.getMethodref(operand)
 			mClassInfo := cpool.getClassInfo(methodRef.class_index)
 			mClassName := cpool.getUTF8Byttes(mClassInfo.name_index)
 			nameAndType := cpool.getNameAndType(methodRef.name_and_type_index)
 			mehotdName :=  cpool.getUTF8Byttes(nameAndType.name_index)
-			fmt.Printf("#    invoking %s.%s()\n", mClassName, mehotdName) // java/lang/System
+			debugf("    invoking %s.%s()\n", mClassName, mehotdName) // java/lang/System
 
 			// argument info
 			desc := cpool.getUTF8Byttes(nameAndType.descriptor_index)
 			desc_args := strings.Split(string(desc), ";")
 			num_args := len(desc_args) - 1
-			fmt.Printf("#    descriptor=%s, num_args=%d\n", desc, num_args)
+			debugf("    descriptor=%s, num_args=%d\n", desc, num_args)
 
 			arg0ifc := pop()
 			arg0id := arg0ifc.(u1)
 			arg0 := cpool.getString(u2(arg0id))
 			arg0StringValue := string(cpool.getUTF8Byttes(arg0.string_index))
-			fmt.Printf("#    arg0=#%d,%s\n", arg0.string_index, arg0StringValue)
+			debugf("    arg0=#%d,%s\n", arg0.string_index, arg0StringValue)
 
 			// receiver info
 			receiver := pop()
@@ -503,8 +503,8 @@ func executeCode(code []byte) {
 			cNameAndType := cpool.getNameAndType(fieldRef.name_and_type_index)
 			fieldName := string(cpool.getUTF8Byttes(cNameAndType.name_index))
 			desc = cpool.getUTF8Byttes(cNameAndType.descriptor_index)
-			fmt.Printf("#    receiver : %s.%s#%s\n", className, fieldName, desc) // java/lang/System
-			fmt.Printf("[Invoking]\n")
+			debugf("    receiver : %s.%s#%s\n", className, fieldName, desc) // java/lang/System
+			debugf("[Invoking]\n")
 			object := classMap[className].staicfields[fieldName]
 			args := []interface{}{
 				object,
@@ -514,7 +514,7 @@ func executeCode(code []byte) {
 		default:
 			panic("Unknown instruction")
 		}
-		fmt.Printf("##  stack=%#v\n", stack)
+		debugf("#  stack=%#v\n", stack)
 	}
 }
 
@@ -545,11 +545,17 @@ func PrintStream_println(args ...interface{}) {
 func (methodInfo MethodInfo) invoke() {
 	for _, ca := range methodInfo.ai {
 		executeCode(ca.code)
-		fmt.Printf("##---\n")
+		debugf("#---\n")
 	}
 }
 
 var debug bool
+
+func debugf(format string, args ...interface{}) {
+	if debug {
+		fmt.Fprintf(os.Stderr, "# " + format, args...)
+	}
+}
 
 func initJava() {
 	classMap = map[string]*JavaClass{
@@ -579,6 +585,6 @@ func main() {
 			methodInfo.invoke()
 		}
 	}
-	//debugClassFile(cf)
+	debugClassFile(cf)
 }
 
