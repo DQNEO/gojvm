@@ -477,9 +477,9 @@ func executeCode(code []byte) {
 			debugf("  invokevirtual 0x%02x\n", operand)
 			methodRef := cpool.getMethodref(operand)
 			mClassInfo := cpool.getClassInfo(methodRef.class_index)
-			mClassName := cpool.getUTF8Byttes(mClassInfo.name_index)
+			mClassName := string(cpool.getUTF8Byttes(mClassInfo.name_index))
 			nameAndType := cpool.getNameAndType(methodRef.name_and_type_index)
-			mehotdName :=  cpool.getUTF8Byttes(nameAndType.name_index)
+			mehotdName :=  string(cpool.getUTF8Byttes(nameAndType.name_index))
 			debugf("    invoking %s.%s()\n", mClassName, mehotdName) // java/lang/System
 
 			// argument info
@@ -510,7 +510,8 @@ func executeCode(code []byte) {
 				object,
 				arg0StringValue,
 			}
-			PrintStream_println(args...)
+			method := classMap[mClassName].methods[mehotdName]
+			method(args...)
 		default:
 			panic("Unknown instruction")
 		}
@@ -527,19 +528,6 @@ type JavaClass struct {
 
 type PrintStream struct {
 	fp *os.File
-}
-
-func PrintStream_println(args ...interface{}) {
-	ps, ok := args[0].(*PrintStream)
-	if !ok {
-		panic("Type mismatch")
-	}
-	s, ok := args[1].(string)
-	if !ok {
-		panic("Type mismatch")
-	}
-
-	fmt.Fprint(ps.fp, s + "\n")
 }
 
 func (methodInfo MethodInfo) invoke() {
@@ -568,7 +556,18 @@ func initJava() {
 		},
 		"java/io/PrintStream": &JavaClass{
 			methods: map[string]func(...interface{}){
-				"println": PrintStream_println,
+				"println": func(args ...interface{}) {
+					ps, ok := args[0].(*PrintStream)
+					if !ok {
+						panic("Type mismatch")
+					}
+					s, ok := args[1].(string)
+					if !ok {
+						panic("Type mismatch")
+					}
+
+					fmt.Fprint(ps.fp, s + "\n")
+				},
 			},
 		},
 	}
