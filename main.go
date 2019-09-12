@@ -361,14 +361,9 @@ func debugClassFile(cf *ClassFile) {
 	fmt.Printf("fields_count=%d\n", cf.fields_count)
 	fmt.Printf("methods_count=%d\n", cf.methods_count)
 
-	for i := u2(0); i < cf.methods_count; i++ {
-		methodInfo := cf.methods[i]
-		entry := cf.constant_pool.get(methodInfo.name_index)
-		cutf8, ok := entry.(*CONSTANT_Utf8_info)
-		if !ok {
-			panic("not CONSTANT_Utf8_info")
-		}
-		fmt.Printf(" %s:\n", cutf8.bytes)
+	for _, methodInfo := range cf.methods{
+		methodName := cf.constant_pool.getUTF8Byttes(methodInfo.name_index)
+		fmt.Printf(" %s:\n", methodName)
 		for _, ca  := range methodInfo.ai {
 			for _, c := range ca.code {
 				fmt.Printf(" %x", c)
