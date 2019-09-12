@@ -576,7 +576,7 @@ func initJava() {
 
 func main() {
 	initJava()
-	cf := parseClassFile("HelloWorld.class")
+	cf := parseClassFile("/dev/stdin")
 	cpool = cf.constant_pool
 	for _, methodInfo := range cf.methods {
 		methodName := cf.constant_pool.getUTF8Byttes(methodInfo.name_index)
