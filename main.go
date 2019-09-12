@@ -45,6 +45,25 @@ type MethodInfo struct {
 	ai               []CodeAttribute
 }
 
+type ConstantPoolEntry interface {
+	Type() string
+	String() string
+}
+
+func (c *CONSTANT_Class_info) Type() string { return "Class" }
+func (c *CONSTANT_Fieldref_info) Type() string { return "Fieldref" }
+func (c *CONSTANT_Methodref_info) Type() string { return "Methodref" }
+func (c *CONSTANT_String_info) Type() string { return "String" }
+func (c *CONSTANT_NameAndType_info) Type() string { return "NameAndType" }
+func (c *CONSTANT_Utf8_info) Type() string { return "UTF8" }
+
+func (c *CONSTANT_Class_info) String() string { return "Class" }
+func (c *CONSTANT_Fieldref_info) String() string { return "Fieldref" }
+func (c *CONSTANT_Methodref_info) String() string { return "Methodref" }
+func (c *CONSTANT_String_info) String() string { return "String" }
+func (c *CONSTANT_NameAndType_info) String() string { return "NameAndType" }
+func (c *CONSTANT_Utf8_info) String() string { return "UTF8" }
+
 type CONSTANT_Class_info struct {
 	tag        u1
 	name_index u2
@@ -78,6 +97,7 @@ type CONSTANT_Utf8_info struct {
 	length u2
 	bytes  []byte
 }
+
 
 func readCafebabe() [4]byte {
 	byteIndex += 4
@@ -170,7 +190,7 @@ func readMethodInfo() MethodInfo {
 	return methodInfo
 }
 
-type ConstantPool []interface{}
+type ConstantPool []ConstantPoolEntry
 
 // https://docs.oracle.com/javase/specs/jvms/se12/html/jvms-4.html#jvms-4.1z
 type ClassFile struct {
@@ -202,12 +222,12 @@ func parseClassFile(filename string) *ClassFile {
 	major_version := readU2()
 	constant_pool_count := readU2()
 
-	var constant_pool []interface{}
+	var constant_pool []ConstantPoolEntry
 	constant_pool = append(constant_pool, nil)
 	for i := u2(0); i < constant_pool_count-1; i++ {
 		tag := readByte()
 		//debugf("[i=%d] tag=%02X\n", i, tag)
-		var e interface{}
+		var e ConstantPoolEntry
 		switch tag {
 		case 0x09:
 			e = &CONSTANT_Fieldref_info{
@@ -316,7 +336,7 @@ func c2s(c interface{}) string {
 
 }
 
-func debugConstantPool(cp []interface{})  {
+func debugConstantPool(cp ConstantPool)  {
 	for i, c := range cp {
 		if i == 0 {
 			continue
