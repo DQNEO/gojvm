@@ -331,6 +331,16 @@ func (cp ConstantPool) getClassInfo(id u2) *CONSTANT_Class_info {
 	return ci
 }
 
+
+func (cp ConstantPool) getUTF8Byttes(id u2) []byte {
+	entry := cp.get(id)
+	utf8, ok := entry.(*CONSTANT_Utf8_info)
+	if !ok {
+		panic("type mismatch")
+	}
+	return utf8.bytes
+}
+
 func debugClassFile(cf *ClassFile) {
 	for _, char := range cf.magic {
 		fmt.Printf("%x ", char)
@@ -339,8 +349,9 @@ func debugClassFile(cf *ClassFile) {
 	fmt.Printf("\n")
 	fmt.Printf("major_version = %d, minior_version = %d\n", cf.major_version, cf.minor_version)
 	fmt.Printf("access_flags=%d\n", cf.access_flags)
-	fmt.Printf("this_class=%d\n", cf.this_class)
-	fmt.Printf("super_class=%d\n", cf.super_class)
+	ci := cf.constant_pool.getClassInfo(cf.this_class)
+	fmt.Printf("class %s\n", cf.constant_pool.getUTF8Byttes(ci.name_index))
+	fmt.Printf("  super_class=%d\n", cf.super_class)
 
 	fmt.Printf("Constant pool:\n")
 	debugConstantPool(cf.constant_pool)
