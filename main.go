@@ -47,6 +47,12 @@ type CONSTANT_Class_info struct {
 	name_index u2
 }
 
+type CONSTANT_Fieldref_info struct {
+	tag                 u1
+	class_index         u2
+	name_and_type_index u2
+}
+
 type CONSTANT_Methodref_info struct {
 	tag                 u1
 	class_index         u2
@@ -197,7 +203,13 @@ func parseClassFile(filename string) *ClassFile {
 		//fmt.Printf("[i=%d] tag=%02X\n", i, tag)
 		var e interface{}
 		switch tag {
-		case 0x0a, 0x09:
+		case 0x09:
+			e = &CONSTANT_Fieldref_info{
+				class_index:         readU2(),
+				name_and_type_index: readU2(),
+				tag:                 tag,
+			}
+		case 0x0a:
 			e = &CONSTANT_Methodref_info{
 				class_index:         readU2(),
 				name_and_type_index: readU2(),
@@ -273,6 +285,37 @@ func parseClassFile(filename string) *ClassFile {
 	}
 }
 
+func debugConstantPool(cp []interface{}) {
+	for i, c := range cp {
+		if i == 0 {
+			continue
+		}
+		fmt.Printf(" #%02d = ",i)
+		switch c.(type) {
+		case *CONSTANT_Fieldref_info:
+			cf := c.(*CONSTANT_Fieldref_info)
+			fmt.Printf("Fieldref\t#%d.#%d\n",
+				cf.class_index, cf.name_and_type_index)
+		case *CONSTANT_Methodref_info:
+			cm := c.(*CONSTANT_Methodref_info)
+			fmt.Printf("Methodref\t#%d.#%d\n",
+				cm.class_index, cm.name_and_type_index)
+		case *CONSTANT_Class_info:
+			fmt.Printf("Class\t%d\n", c.(*CONSTANT_Class_info).name_index)
+		case *CONSTANT_String_info:
+			fmt.Printf("String\t%d\n", c.(*CONSTANT_String_info).string_index)
+		case *CONSTANT_NameAndType_info:
+			cn := c.(*CONSTANT_NameAndType_info)
+			fmt.Printf("NameAndType\t#%d:#%d\n", cn.name_index, cn.descriptor_index)
+		case *CONSTANT_Utf8_info:
+			fmt.Printf("Utf8\t%s\n", c.(*CONSTANT_Utf8_info).bytes)
+		default:
+			panic("Unknown constant pool")
+		}
+	}
+
+}
+
 func debugClassFile(cf *ClassFile) {
 	for _, char := range cf.magic {
 		fmt.Printf("%x ", char)
@@ -282,10 +325,8 @@ func debugClassFile(cf *ClassFile) {
 	fmt.Printf("major = %d, minior = %d\n", cf.major_version, cf.minor_version)
 	fmt.Printf("constant_pool_count = %d\n", cf.constant_pool_count)
 
-	fmt.Printf("Entries=%d\n", len(cf.constant_pool)-1)
-	for i, e := range cf.constant_pool {
-		fmt.Printf("[%d] Entry=%#v\n", i, e)
-	}
+	fmt.Printf("Constant pool:\n")
+	debugConstantPool(cf.constant_pool)
 
 	fmt.Printf("access_flags=%d\n", cf.access_flags)
 	fmt.Printf("this_class=%d\n", cf.this_class)
