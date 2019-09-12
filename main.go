@@ -73,7 +73,7 @@ type CONSTANT_NameAndType_info struct {
 type CONSTANT_Utf8_info struct {
 	tag    u1
 	length u2
-	bytes  string
+	bytes  []byte
 }
 
 func readCafebabe() [4]byte {
@@ -232,7 +232,7 @@ func parseClassFile(filename string) *ClassFile {
 			e = &CONSTANT_Utf8_info{
 				tag:    tag,
 				length: ln,
-				bytes:  string(readBytes(int(ln))),
+				bytes:  readBytes(int(ln)),
 			}
 		case 0x0c:
 			e = &CONSTANT_NameAndType_info{
