@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 )
 
+var cpool ConstantPool
 var bytes []byte
 var byteIndex int = 0
 
@@ -107,6 +109,7 @@ func readBytes(n int) []byte {
 	byteIndex += n
 	return r
 }
+
 func readByte() u1 {
 	b := bytes[byteIndex]
 	byteIndex++
@@ -287,39 +290,62 @@ func parseClassFile(filename string) *ClassFile {
 	}
 }
 
-func debugConstantPool(cp []interface{}) {
+func c2s(c interface{}) string {
+	switch c.(type) {
+	case *CONSTANT_Fieldref_info:
+		cf := c.(*CONSTANT_Fieldref_info)
+		return fmt.Sprintf("Fieldref\t#%d.#%d",
+			cf.class_index, cf.name_and_type_index)
+	case *CONSTANT_Methodref_info:
+		cm := c.(*CONSTANT_Methodref_info)
+		return fmt.Sprintf("Methodref\t#%d.#%d",
+			cm.class_index, cm.name_and_type_index)
+	case *CONSTANT_Class_info:
+		return fmt.Sprintf("Class\t%d", c.(*CONSTANT_Class_info).name_index)
+	case *CONSTANT_String_info:
+		return fmt.Sprintf("String\t%d", c.(*CONSTANT_String_info).string_index)
+	case *CONSTANT_NameAndType_info:
+		cn := c.(*CONSTANT_NameAndType_info)
+		return fmt.Sprintf("NameAndType\t#%d:#%d", cn.name_index, cn.descriptor_index)
+	case *CONSTANT_Utf8_info:
+		return fmt.Sprintf("Utf8\t%s", c.(*CONSTANT_Utf8_info).bytes)
+	default:
+		panic("Unknown constant pool")
+	}
+
+}
+
+func debugConstantPool(cp []interface{})  {
 	for i, c := range cp {
 		if i == 0 {
 			continue
 		}
 		fmt.Printf(" #%02d = ",i)
-		switch c.(type) {
-		case *CONSTANT_Fieldref_info:
-			cf := c.(*CONSTANT_Fieldref_info)
-			fmt.Printf("Fieldref\t#%d.#%d\n",
-				cf.class_index, cf.name_and_type_index)
-		case *CONSTANT_Methodref_info:
-			cm := c.(*CONSTANT_Methodref_info)
-			fmt.Printf("Methodref\t#%d.#%d\n",
-				cm.class_index, cm.name_and_type_index)
-		case *CONSTANT_Class_info:
-			fmt.Printf("Class\t%d\n", c.(*CONSTANT_Class_info).name_index)
-		case *CONSTANT_String_info:
-			fmt.Printf("String\t%d\n", c.(*CONSTANT_String_info).string_index)
-		case *CONSTANT_NameAndType_info:
-			cn := c.(*CONSTANT_NameAndType_info)
-			fmt.Printf("NameAndType\t#%d:#%d\n", cn.name_index, cn.descriptor_index)
-		case *CONSTANT_Utf8_info:
-			fmt.Printf("Utf8\t%s\n", c.(*CONSTANT_Utf8_info).bytes)
-		default:
-			panic("Unknown constant pool")
-		}
+		s := c2s(c)
+		fmt.Printf("%s\n", s)
 	}
-
 }
 
 func (cp ConstantPool) get(i u2) interface{} {
 	return cp[i]
+}
+
+func (cp ConstantPool) getFieldref(id u2) *CONSTANT_Fieldref_info {
+	entry := cp.get(id)
+	c, ok := entry.(*CONSTANT_Fieldref_info)
+	if !ok {
+		panic("type mismatch")
+	}
+	return c
+}
+
+func (cp ConstantPool) getMethodref(id u2) *CONSTANT_Methodref_info {
+	entry := cp.get(id)
+	c, ok := entry.(*CONSTANT_Methodref_info)
+	if !ok {
+		panic("type mismatch")
+	}
+	return c
 }
 
 func (cp ConstantPool) getClassInfo(id u2) *CONSTANT_Class_info {
@@ -331,6 +357,14 @@ func (cp ConstantPool) getClassInfo(id u2) *CONSTANT_Class_info {
 	return ci
 }
 
+func (cp ConstantPool) getNameAndType(id u2) *CONSTANT_NameAndType_info {
+	entry := cp.get(id)
+	c, ok := entry.(*CONSTANT_NameAndType_info)
+	if !ok {
+		panic("type mismatch")
+	}
+	return c
+}
 
 func (cp ConstantPool) getUTF8Byttes(id u2) []byte {
 	entry := cp.get(id)
@@ -366,7 +400,7 @@ func debugClassFile(cf *ClassFile) {
 		fmt.Printf(" %s:\n", methodName)
 		for _, ca  := range methodInfo.ai {
 			for _, c := range ca.code {
-				fmt.Printf(" %x", c)
+				fmt.Printf(" %02x", c)
 			}
 		}
 		fmt.Printf("\n")
@@ -375,8 +409,95 @@ func debugClassFile(cf *ClassFile) {
 	fmt.Printf("attribute=%v\n", cf.attributes[0])
 }
 
+func getByte() byte {
+	b := bytes[byteIndex]
+	byteIndex++
+	return b
+}
+
+var stack []interface{}
+
+func push(e interface{}) {
+	stack = append(stack, e)
+}
+
+func pop() interface{} {
+	e := stack[len(stack)-1]
+	newStack := stack[0:len(stack)-1]
+	stack = newStack
+	return e
+}
+
+func executeCode(code []byte) {
+	fmt.Printf("len code=%d\n", len(code))
+
+	byteIndex = 0
+	bytes = code
+	for _, b := range code {
+		fmt.Printf("0x%x ", b)
+	}
+	fmt.Printf("\n")
+	for {
+		if byteIndex >= len(bytes) {
+			break
+		}
+		b := getByte()
+		fmt.Printf("inst 0x%02x\n", b)
+		switch b {
+		case 0x12: // ldc
+			operand := readByte()
+			fmt.Printf("  ldc 0x%02x\n", operand)
+			push(operand)
+		case 0xb1: // return
+			fmt.Printf("  return\n")
+		case 0xb2: // getstatic
+			operand := readU2()
+			fmt.Printf("  getstatic 0x%02x\n", operand)
+			fieldref := cpool.getFieldref(operand)
+			cls := cpool.getClassInfo(fieldref.class_index)
+			className := cpool.getUTF8Byttes(cls.name_index)
+			nameAndType := cpool.getNameAndType(fieldref.name_and_type_index)
+			name := cpool.getUTF8Byttes(nameAndType.name_index)
+			desc := cpool.getUTF8Byttes(nameAndType.descriptor_index)
+			fmt.Printf("   => %s#%s#%s#%s\n", c2s(fieldref), className, name, desc)
+			push(operand)
+		case 0xb6: // invokevirtual
+			operand := readU2()
+			fmt.Printf("  invokevirtual 0x%02x\n", operand)
+			methodRef := cpool.getMethodref(operand)
+			nameAndType := cpool.getNameAndType(methodRef.name_and_type_index)
+			desc := cpool.getUTF8Byttes(nameAndType.descriptor_index)
+			desc_args := strings.Split(string(desc), ";")
+			num_args := len(desc_args) - 1
+			fmt.Printf("  desc=%s, num_args=%d\n", desc, num_args)
+			arg0id := pop()
+			arg0int := arg0id.(u1)
+			arg0 := cpool.get(u2(arg0int))
+			fmt.Printf("  arg0=%s\n", c2s(arg0))
+		default:
+			panic("Unknown instruction")
+		}
+		fmt.Printf("  stack=%#v\n", stack)
+
+	}
+}
+
+func (methodInfo MethodInfo) invoke() {
+	for _, ca := range methodInfo.ai {
+		executeCode(ca.code)
+		fmt.Printf("---\n")
+	}
+}
+
 func main() {
 	cf := parseClassFile("HelloWorld.class")
+	cpool = cf.constant_pool
+	for _, methodInfo := range cf.methods {
+		methodName := cf.constant_pool.getUTF8Byttes(methodInfo.name_index)
+		if string(methodName) == "main" {
+			methodInfo.invoke()
+		}
+	}
 	debugClassFile(cf)
 }
 
