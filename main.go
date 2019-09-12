@@ -358,6 +358,6 @@ func main() {
 	debugClassFile(cf)
 }
 
-func getFromCPool(entries []interface{}, i u2) interface{} {
-	return entries[i]
+func getFromCPool(cp []interface{}, i u2) interface{} {
+	return cp[i]
 }
