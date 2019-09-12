@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 )
 
@@ -205,7 +206,7 @@ func parseClassFile(filename string) *ClassFile {
 	constant_pool = append(constant_pool, nil)
 	for i := u2(0); i < constant_pool_count-1; i++ {
 		tag := readByte()
-		//fmt.Printf("[i=%d] tag=%02X\n", i, tag)
+		//fmt.Printf("#[i=%d] tag=%02X\n", i, tag)
 		var e interface{}
 		switch tag {
 		case 0x09:
@@ -269,7 +270,7 @@ func parseClassFile(filename string) *ClassFile {
 		attributes = append(attributes, attr)
 	}
 	if len(bytes) == byteIndex {
-		fmt.Printf("__EOF__\n")
+		fmt.Printf("#__EOF__\n")
 	}
 
 	return &ClassFile{
@@ -320,9 +321,9 @@ func debugConstantPool(cp []interface{})  {
 		if i == 0 {
 			continue
 		}
-		fmt.Printf(" #%02d = ",i)
+		fmt.Printf("# #%02d = ",i)
 		s := c2s(c)
-		fmt.Printf("%s\n", s)
+		fmt.Printf("#%s\n", s)
 	}
 }
 
@@ -366,6 +367,15 @@ func (cp ConstantPool) getNameAndType(id u2) *CONSTANT_NameAndType_info {
 	return c
 }
 
+func (cp ConstantPool) getString(id u2) *CONSTANT_String_info {
+	entry := cp.get(id)
+	c, ok := entry.(*CONSTANT_String_info)
+	if !ok {
+		panic("type mismatch")
+	}
+	return c
+}
+
 func (cp ConstantPool) getUTF8Byttes(id u2) []byte {
 	entry := cp.get(id)
 	utf8, ok := entry.(*CONSTANT_Utf8_info)
@@ -377,36 +387,36 @@ func (cp ConstantPool) getUTF8Byttes(id u2) []byte {
 
 func debugClassFile(cf *ClassFile) {
 	for _, char := range cf.magic {
-		fmt.Printf("%x ", char)
+		fmt.Printf("#%x ", char)
 	}
 
-	fmt.Printf("\n")
-	fmt.Printf("major_version = %d, minior_version = %d\n", cf.major_version, cf.minor_version)
-	fmt.Printf("access_flags=%d\n", cf.access_flags)
+	fmt.Printf("#\n")
+	fmt.Printf("#major_version = %d, minior_version = %d\n", cf.major_version, cf.minor_version)
+	fmt.Printf("#access_flags=%d\n", cf.access_flags)
 	ci := cf.constant_pool.getClassInfo(cf.this_class)
-	fmt.Printf("class %s\n", cf.constant_pool.getUTF8Byttes(ci.name_index))
-	fmt.Printf("  super_class=%d\n", cf.super_class)
+	fmt.Printf("#class %s\n", cf.constant_pool.getUTF8Byttes(ci.name_index))
+	fmt.Printf("#  super_class=%d\n", cf.super_class)
 
-	fmt.Printf("Constant pool:\n")
+	fmt.Printf("#Constant pool:\n")
 	debugConstantPool(cf.constant_pool)
 
-	fmt.Printf("interface_count=%d\n", cf.interface_count)
-	//fmt.Printf("interfaces=%d\n", interfaces)
-	fmt.Printf("fields_count=%d\n", cf.fields_count)
-	fmt.Printf("methods_count=%d\n", cf.methods_count)
+	fmt.Printf("#interface_count=%d\n", cf.interface_count)
+	//fmt.Printf("#interfaces=%d\n", interfaces)
+	fmt.Printf("#fields_count=%d\n", cf.fields_count)
+	fmt.Printf("#methods_count=%d\n", cf.methods_count)
 
 	for _, methodInfo := range cf.methods{
 		methodName := cf.constant_pool.getUTF8Byttes(methodInfo.name_index)
-		fmt.Printf(" %s:\n", methodName)
+		fmt.Printf("# %s:\n", methodName)
 		for _, ca  := range methodInfo.ai {
 			for _, c := range ca.code {
-				fmt.Printf(" %02x", c)
+				fmt.Printf("# %02x", c)
 			}
 		}
-		fmt.Printf("\n")
+		fmt.Printf("#\n")
 	}
-	fmt.Printf("attributes_count=%d\n", cf.attributes_count)
-	fmt.Printf("attribute=%v\n", cf.attributes[0])
+	fmt.Printf("#attributes_count=%d\n", cf.attributes_count)
+	fmt.Printf("#attribute=%v\n", cf.attributes[0])
 }
 
 func getByte() byte {
@@ -429,67 +439,138 @@ func pop() interface{} {
 }
 
 func executeCode(code []byte) {
-	fmt.Printf("len code=%d\n", len(code))
+	fmt.Printf("#len code=%d\n", len(code))
 
 	byteIndex = 0
 	bytes = code
 	for _, b := range code {
-		fmt.Printf("0x%x ", b)
+		fmt.Printf("#0x%x ", b)
 	}
-	fmt.Printf("\n")
+	fmt.Printf("#\n")
 	for {
 		if byteIndex >= len(bytes) {
 			break
 		}
 		b := getByte()
-		fmt.Printf("inst 0x%02x\n", b)
+		fmt.Printf("#inst 0x%02x\n", b)
 		switch b {
 		case 0x12: // ldc
 			operand := readByte()
-			fmt.Printf("  ldc 0x%02x\n", operand)
+			fmt.Printf("#  ldc 0x%02x\n", operand)
 			push(operand)
 		case 0xb1: // return
-			fmt.Printf("  return\n")
+			fmt.Printf("#  return\n")
+			return
 		case 0xb2: // getstatic
 			operand := readU2()
-			fmt.Printf("  getstatic 0x%02x\n", operand)
+			fmt.Printf("#  getstatic 0x%02x\n", operand)
 			fieldref := cpool.getFieldref(operand)
 			cls := cpool.getClassInfo(fieldref.class_index)
 			className := cpool.getUTF8Byttes(cls.name_index)
 			nameAndType := cpool.getNameAndType(fieldref.name_and_type_index)
 			name := cpool.getUTF8Byttes(nameAndType.name_index)
 			desc := cpool.getUTF8Byttes(nameAndType.descriptor_index)
-			fmt.Printf("   => %s#%s#%s#%s\n", c2s(fieldref), className, name, desc)
+			fmt.Printf("#   => %s#%s#%s#%s\n", c2s(fieldref), className, name, desc)
 			push(operand)
 		case 0xb6: // invokevirtual
 			operand := readU2()
-			fmt.Printf("  invokevirtual 0x%02x\n", operand)
+			fmt.Printf("#  invokevirtual 0x%02x\n", operand)
 			methodRef := cpool.getMethodref(operand)
+			mClassInfo := cpool.getClassInfo(methodRef.class_index)
+			mClassName := cpool.getUTF8Byttes(mClassInfo.name_index)
 			nameAndType := cpool.getNameAndType(methodRef.name_and_type_index)
+			mehotdName :=  cpool.getUTF8Byttes(nameAndType.name_index)
+			fmt.Printf("#    invoking %s.%s()\n", mClassName, mehotdName) // java/lang/System
+
+			// argument info
 			desc := cpool.getUTF8Byttes(nameAndType.descriptor_index)
 			desc_args := strings.Split(string(desc), ";")
 			num_args := len(desc_args) - 1
-			fmt.Printf("  desc=%s, num_args=%d\n", desc, num_args)
-			arg0id := pop()
-			arg0int := arg0id.(u1)
-			arg0 := cpool.get(u2(arg0int))
-			fmt.Printf("  arg0=%s\n", c2s(arg0))
+			fmt.Printf("#    descriptor=%s, num_args=%d\n", desc, num_args)
+
+			arg0ifc := pop()
+			arg0id := arg0ifc.(u1)
+			arg0 := cpool.getString(u2(arg0id))
+			arg0StringValue := string(cpool.getUTF8Byttes(arg0.string_index))
+			fmt.Printf("#    arg0=#%d,%s\n", arg0.string_index, arg0StringValue)
+
+			// receiver info
+			receiver := pop()
+			// System.out:PrintStream
+			fieldRef := cpool.getFieldref(receiver.(u2))
+			classInfo := cpool.getClassInfo(fieldRef.class_index)// class System
+			className := string(cpool.getUTF8Byttes(classInfo.name_index))
+			cNameAndType := cpool.getNameAndType(fieldRef.name_and_type_index)
+			fieldName := string(cpool.getUTF8Byttes(cNameAndType.name_index))
+			desc = cpool.getUTF8Byttes(cNameAndType.descriptor_index)
+			fmt.Printf("#    receiver : %s.%s#%s\n", className, fieldName, desc) // java/lang/System
+			fmt.Printf("[Invoking]\n")
+			object := classMap[className].staicfields[fieldName]
+			args := []interface{}{
+				object,
+				arg0StringValue,
+			}
+			PrintStream_println(args...)
 		default:
 			panic("Unknown instruction")
 		}
-		fmt.Printf("  stack=%#v\n", stack)
-
+		fmt.Printf("##  stack=%#v\n", stack)
 	}
+}
+
+var classMap map[string]*JavaClass
+
+type JavaClass struct {
+	staicfields map[string]interface{}
+	methods map[string]func(...interface{})
+}
+
+type PrintStream struct {
+	fp *os.File
+}
+
+func PrintStream_println(args ...interface{}) {
+	ps, ok := args[0].(*PrintStream)
+	if !ok {
+		panic("Type mismatch")
+	}
+	s, ok := args[1].(string)
+	if !ok {
+		panic("Type mismatch")
+	}
+
+	fmt.Fprint(ps.fp, s + "\n")
 }
 
 func (methodInfo MethodInfo) invoke() {
 	for _, ca := range methodInfo.ai {
 		executeCode(ca.code)
-		fmt.Printf("---\n")
+		fmt.Printf("##---\n")
 	}
 }
 
+var debug bool
+
+func initJava() {
+	classMap = map[string]*JavaClass{
+		"java/lang/System" : &JavaClass{
+			staicfields: map[string]interface{}{
+				"out": &PrintStream{
+					fp: os.Stdout,
+				},
+			},
+		},
+		"java/io/PrintStream": &JavaClass{
+			methods: map[string]func(...interface{}){
+				"println": PrintStream_println,
+			},
+		},
+	}
+}
+
+
 func main() {
+	initJava()
 	cf := parseClassFile("HelloWorld.class")
 	cpool = cf.constant_pool
 	for _, methodInfo := range cf.methods {
@@ -498,6 +579,6 @@ func main() {
 			methodInfo.invoke()
 		}
 	}
-	debugClassFile(cf)
+	//debugClassFile(cf)
 }
 
