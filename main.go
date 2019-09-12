@@ -172,7 +172,7 @@ func readMethodInfo() MethodInfo {
 
 type ConstantPool []interface{}
 
-// https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-4.html#jvms-4.1
+// https://docs.oracle.com/javase/specs/jvms/se12/html/jvms-4.html#jvms-4.1z
 type ClassFile struct {
 	magic               [4]byte
 	minor_version       u2
