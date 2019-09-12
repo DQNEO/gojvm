@@ -323,12 +323,13 @@ func debugClassFile(cf *ClassFile) {
 
 	fmt.Printf("\n")
 	fmt.Printf("major_version = %d, minior_version = %d\n", cf.major_version, cf.minor_version)
-	fmt.Printf("Constant pool:\n")
-	debugConstantPool(cf.constant_pool)
-
 	fmt.Printf("access_flags=%d\n", cf.access_flags)
 	fmt.Printf("this_class=%d\n", cf.this_class)
 	fmt.Printf("super_class=%d\n", cf.super_class)
+
+	fmt.Printf("Constant pool:\n")
+	debugConstantPool(cf.constant_pool)
+
 	fmt.Printf("interface_count=%d\n", cf.interface_count)
 	//fmt.Printf("interfaces=%d\n", interfaces)
 	fmt.Printf("fields_count=%d\n", cf.fields_count)
