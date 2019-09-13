@@ -496,14 +496,14 @@ func executeCode(code []byte) {
 			operand := readU2()
 			debugf("  invokevirtual 0x%02x\n", operand)
 			methodRef := cpool.getMethodref(operand)
-			mClassInfo := cpool.getClassInfo(methodRef.class_index)
-			mClassName := string(cpool.getUTF8Byttes(mClassInfo.name_index))
-			nameAndType := cpool.getNameAndType(methodRef.name_and_type_index)
-			mehotdName :=  string(cpool.getUTF8Byttes(nameAndType.name_index))
-			debugf("    invoking %s.%s()\n", mClassName, mehotdName) // java/lang/System
+			methodClassInfo := cpool.getClassInfo(methodRef.class_index)
+			methodClassName := string(cpool.getUTF8Byttes(methodClassInfo.name_index))
+			methodNameAndType := cpool.getNameAndType(methodRef.name_and_type_index)
+			methodName :=  string(cpool.getUTF8Byttes(methodNameAndType.name_index))
+			debugf("    invoking %s.%s()\n", methodClassName, methodName) // java/lang/System
 
 			// argument info
-			desc := cpool.getUTF8Byttes(nameAndType.descriptor_index)
+			desc := cpool.getUTF8Byttes(methodNameAndType.descriptor_index)
 			desc_args := strings.Split(string(desc), ";")
 			num_args := len(desc_args) - 1
 			debugf("    descriptor=%s, num_args=%d\n", desc, num_args)
@@ -530,7 +530,7 @@ func executeCode(code []byte) {
 				object,
 				arg0StringValue,
 			}
-			method := classMap[mClassName].methods[mehotdName]
+			method := classMap[methodClassName].methods[methodName]
 			method(args...)
 		default:
 			panic("Unknown instruction")
