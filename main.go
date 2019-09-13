@@ -637,8 +637,7 @@ func executeCode(code []byte, localvars []interface{}) {
 	}
 }
 
-var rax interface{}
-var rbx interface{}
+var rax interface{} // to store return value
 
 var classMap map[string]*JavaClass
 
