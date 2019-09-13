@@ -594,6 +594,7 @@ func main() {
 	debug = true
 	initJava()
 	cf := parseClassFile("/dev/stdin")
+	debugClassFile(cf)
 	cpool = cf.constant_pool
 	for _, methodInfo := range cf.methods {
 		methodName := cf.constant_pool.getUTF8Byttes(methodInfo.name_index)
@@ -601,6 +602,5 @@ func main() {
 			methodInfo.invoke()
 		}
 	}
-	debugClassFile(cf)
 }
 
