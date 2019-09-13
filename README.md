@@ -7,24 +7,28 @@ Currently, it only supports "hello world" and arithmetic addition.
 
 # USAGE
 
-Hello world
+## Hello world
 
-```
-$ cat HelloWorld.java                                                                                                                      (git)-[master] ? 
+HelloWorld.java
+
+```java
 public class HelloWorld {
     public static void main(String[] args) {
         System.out.println("Hello world");
     }
 }
+```
 
+```
 $ cat HelloWorld.class | go run main.go                                                                                                 (git)-[master]  (p9)
 Hello world
 ```
 
-Arithmetic addition
+## Arithmetic addition
 
-```
-$ cat Arith.java                                                                                                                           (git)-[master] ? 
+Arith.java
+
+```java
 public class Arith {
     public static void main(String[] args) {
         int c = sum(30, 12);
@@ -35,7 +39,9 @@ public class Arith {
         return a + b;
     }
 }
+```
 
+```
 $ cat Arith.class | go run main.go                                                                                                         (git)-[master] ? 
 42
 ```
