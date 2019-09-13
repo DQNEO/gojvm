@@ -500,6 +500,7 @@ func executeCode(code []byte) {
 		}
 		b := readU1()
 		debugf("inst 0x%02x\n", b)
+		// https://docs.oracle.com/javase/specs/jvms/se12/html/jvms-6.html#jvms-6.5
 		switch b {
 		case 0x12: // ldc
 			operand := readU1()
