@@ -396,7 +396,11 @@ func (cp ConstantPool) getString(id u2) *CONSTANT_String_info {
 	return c
 }
 
-func (cp ConstantPool) getUTF8Byttes(id u2) []byte {
+func (cp ConstantPool) getUTF8AsString(id u2) string {
+	return string(cp.getUTF8Bytes(id))
+}
+
+func (cp ConstantPool) getUTF8Bytes(id u2) []byte {
 	entry := cp.get(id)
 	utf8, ok := entry.(*CONSTANT_Utf8_info)
 	if !ok {
@@ -414,7 +418,7 @@ func debugClassFile(cf *ClassFile) {
 	debugf("major_version = %d, minior_version = %d\n", cf.major_version, cf.minor_version)
 	debugf("access_flags=%d\n", cf.access_flags)
 	ci := cf.constant_pool.getClassInfo(cf.this_class)
-	debugf("class %s\n", cf.constant_pool.getUTF8Byttes(ci.name_index))
+	debugf("class %s\n", cf.constant_pool.getUTF8AsString(ci.name_index))
 	debugf("  super_class=%d\n", cf.super_class)
 
 	debugf("Constant pool:\n")
@@ -426,7 +430,7 @@ func debugClassFile(cf *ClassFile) {
 	debugf("methods_count=%d\n", cf.methods_count)
 
 	for _, methodInfo := range cf.methods{
-		methodName := cf.constant_pool.getUTF8Byttes(methodInfo.name_index)
+		methodName := cf.constant_pool.getUTF8AsString(methodInfo.name_index)
 		debugf(" %s:\n", methodName)
 		for _, ca  := range methodInfo.ai {
 			for _, c := range ca.code {
@@ -484,46 +488,47 @@ func executeCode(code []byte) {
 		case 0xb2: // getstatic
 			operand := readU2()
 			debugf("  getstatic 0x%02x\n", operand)
-			fieldref := cpool.getFieldref(operand)
-			cls := cpool.getClassInfo(fieldref.class_index)
-			className := cpool.getUTF8Byttes(cls.name_index)
-			nameAndType := cpool.getNameAndType(fieldref.name_and_type_index)
-			name := cpool.getUTF8Byttes(nameAndType.name_index)
-			desc := cpool.getUTF8Byttes(nameAndType.descriptor_index)
-			debugf("   => %s#%s#%s#%s\n", c2s(fieldref), className, name, desc)
+			fieldRef := cpool.getFieldref(operand)
+			classInfo := cpool.getClassInfo(fieldRef.class_index)
+			className := cpool.getUTF8AsString(classInfo.name_index)
+			nameAndType := cpool.getNameAndType(fieldRef.name_and_type_index)
+			name := cpool.getUTF8AsString(nameAndType.name_index)
+			desc := cpool.getUTF8AsString(nameAndType.descriptor_index)
+			debugf("   => %s#%s#%s#%s\n", c2s(fieldRef), className, name, desc)
 			push(operand)
 		case 0xb6: // invokevirtual
 			operand := readU2()
 			debugf("  invokevirtual 0x%02x\n", operand)
 			methodRef := cpool.getMethodref(operand)
 			methodClassInfo := cpool.getClassInfo(methodRef.class_index)
-			methodClassName := string(cpool.getUTF8Byttes(methodClassInfo.name_index))
+			methodClassName := cpool.getUTF8AsString(methodClassInfo.name_index)
 			methodNameAndType := cpool.getNameAndType(methodRef.name_and_type_index)
-			methodName :=  string(cpool.getUTF8Byttes(methodNameAndType.name_index))
+			methodName :=  cpool.getUTF8AsString(methodNameAndType.name_index)
 			debugf("    invoking %s.%s()\n", methodClassName, methodName) // java/lang/System
 
 			// argument info
-			desc := cpool.getUTF8Byttes(methodNameAndType.descriptor_index)
-			desc_args := strings.Split(string(desc), ";")
+			desc := cpool.getUTF8AsString(methodNameAndType.descriptor_index)
+			desc_args := strings.Split(desc, ";")
 			num_args := len(desc_args) - 1
 			debugf("    descriptor=%s, num_args=%d\n", desc, num_args)
 
 			arg0ifc := pop()
 			arg0id := arg0ifc.(u1)
 			arg0 := cpool.getString(u2(arg0id))
-			arg0StringValue := string(cpool.getUTF8Byttes(arg0.string_index))
+			arg0StringValue := cpool.getUTF8AsString(arg0.string_index)
 			debugf("    arg0=#%d,%s\n", arg0.string_index, arg0StringValue)
 
 			// receiverId info
 			receiverId := pop()
 			// System.out:PrintStream
 			fieldRef := cpool.getFieldref(receiverId.(u2))
-			fieldClassInfo := cpool.getClassInfo(fieldRef.class_index) // class System
-			fieldClassName := string(cpool.getUTF8Byttes(fieldClassInfo.name_index))
+			fieldClassInfo := cpool.getClassInfo(fieldRef.class_index)         // class System
+			fieldClassName := cpool.getUTF8AsString(fieldClassInfo.name_index) // java/lang/System
 			fieldNameAndType := cpool.getNameAndType(fieldRef.name_and_type_index)
-			fieldName := string(cpool.getUTF8Byttes(fieldNameAndType.name_index))
-			desc = cpool.getUTF8Byttes(fieldNameAndType.descriptor_index)
-			debugf("    receiver=%s.%s#%s\n", fieldClassName, fieldName, desc) // java/lang/System
+			fieldName := cpool.getUTF8AsString(fieldNameAndType.name_index)    // out
+			desc = cpool.getUTF8AsString(fieldNameAndType.descriptor_index)    // Ljava/io/PrintStream;
+			debugf("    receiver=%s.%s %s\n", fieldClassName, fieldName, desc) // java/lang/System.out Ljava/io/PrintStream;
+
 			debugf("[Invoking]\n")
 			receiver := classMap[fieldClassName].staicfields[fieldName]
 			method := classMap[methodClassName].methods[methodName]
@@ -597,8 +602,8 @@ func main() {
 	debugClassFile(cf)
 	cpool = cf.constant_pool
 	for _, methodInfo := range cf.methods {
-		methodName := cf.constant_pool.getUTF8Byttes(methodInfo.name_index)
-		if string(methodName) == "main" {
+		methodName := cf.constant_pool.getUTF8AsString(methodInfo.name_index)
+		if methodName == "main" {
 			methodInfo.invoke()
 		}
 	}
