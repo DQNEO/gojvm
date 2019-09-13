@@ -692,7 +692,7 @@ func initJava() {
 
 
 func main() {
-	debug = true
+	debug = false
 	initJava()
 	cf = parseClassFile("/dev/stdin")
 	cpool = cf.constant_pool
