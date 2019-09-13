@@ -98,6 +98,9 @@ func (c *CONSTANT_String_info) String() string { return "String" }
 func (c *CONSTANT_NameAndType_info) String() string { return "NameAndType" }
 func (c *CONSTANT_Utf8_info) String() string { return "UTF8" }
 
+func (c *CONSTANT_Class_info) getName() string {
+	return cpool.getUTF8AsString(c.name_index)
+}
 
 func readCafebabe() [4]byte {
 	byteIndex += 4
@@ -490,7 +493,7 @@ func executeCode(code []byte) {
 			debugf("  getstatic 0x%02x\n", operand)
 			fieldRef := cpool.getFieldref(operand)
 			classInfo := cpool.getClassInfo(fieldRef.class_index)
-			className := cpool.getUTF8AsString(classInfo.name_index)
+			className := classInfo.getName()
 			nameAndType := cpool.getNameAndType(fieldRef.name_and_type_index)
 			name := cpool.getUTF8AsString(nameAndType.name_index)
 			desc := cpool.getUTF8AsString(nameAndType.descriptor_index)
@@ -501,7 +504,7 @@ func executeCode(code []byte) {
 			debugf("  invokevirtual 0x%02x\n", operand)
 			methodRef := cpool.getMethodref(operand)
 			methodClassInfo := cpool.getClassInfo(methodRef.class_index)
-			methodClassName := cpool.getUTF8AsString(methodClassInfo.name_index)
+			methodClassName := methodClassInfo.getName()
 			methodNameAndType := cpool.getNameAndType(methodRef.name_and_type_index)
 			methodName :=  cpool.getUTF8AsString(methodNameAndType.name_index)
 			debugf("    invoking %s.%s()\n", methodClassName, methodName) // java/lang/System
@@ -523,7 +526,7 @@ func executeCode(code []byte) {
 			// System.out:PrintStream
 			fieldRef := cpool.getFieldref(receiverId.(u2))
 			fieldClassInfo := cpool.getClassInfo(fieldRef.class_index)         // class System
-			fieldClassName := cpool.getUTF8AsString(fieldClassInfo.name_index) // java/lang/System
+			fieldClassName := fieldClassInfo.getName() // java/lang/System
 			fieldNameAndType := cpool.getNameAndType(fieldRef.name_and_type_index)
 			fieldName := cpool.getUTF8AsString(fieldNameAndType.name_index)    // out
 			desc = cpool.getUTF8AsString(fieldNameAndType.descriptor_index)    // Ljava/io/PrintStream;
