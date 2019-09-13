@@ -418,7 +418,7 @@ func (cp ConstantPool) getString(id u2) string {
 	entry := cp.get(id)
 	c, ok := entry.(*CONSTANT_String_info)
 	if !ok {
-		panic("type mismatch")
+		panic(fmt.Sprintf("CONSTANT_String_info expected, but got %T", entry))
 	}
 
 	return cp.getUTF8AsString(c.string_index)
