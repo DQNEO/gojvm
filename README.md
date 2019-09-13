@@ -45,6 +45,11 @@ public class Arith {
 $ cat Arith.class | go run main.go                                                                                                         (git)-[master] ? 
 42
 ```
+# How to test
+
+```
+make test
+```
 
 # ACKNOWLEDGMENT
 
