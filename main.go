@@ -439,6 +439,7 @@ func (cp ConstantPool) getUTF8Bytes(id u2) []byte {
 }
 
 func debugClassFile(cf *ClassFile) {
+	cp := cf.constant_pool
 	for _, char := range cf.magic {
 		debugf("%x ", char)
 	}
@@ -446,9 +447,9 @@ func debugClassFile(cf *ClassFile) {
 	debugf("\n")
 	debugf("major_version = %d, minior_version = %d\n", cf.major_version, cf.minor_version)
 	debugf("access_flags=%d\n", cf.access_flags)
-	ci := cf.constant_pool.getClassInfo(cf.this_class)
-	debugf("class %s\n", cf.constant_pool.getUTF8AsString(ci.name_index))
-	debugf("  super_class=%d\n", cf.super_class)
+	thisClassInfo := cp.getClassInfo(cf.this_class)
+	debugf("class %s\n", thisClassInfo.getName())
+	debugf("  super_class=%s\n", cp.getClassInfo(cf.super_class).getName())
 
 	debugf("Constant pool:\n")
 	debugConstantPool(cf.constant_pool)
@@ -623,8 +624,8 @@ func main() {
 	debug = true
 	initJava()
 	cf := parseClassFile("/dev/stdin")
-	debugClassFile(cf)
 	cpool = cf.constant_pool
+	debugClassFile(cf)
 	for _, methodInfo := range cf.methods {
 		methodName := cf.constant_pool.getUTF8AsString(methodInfo.name_index)
 		if methodName == "main" {
