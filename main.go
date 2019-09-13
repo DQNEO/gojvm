@@ -494,6 +494,9 @@ func executeCode(code []byte) {
 		debugf("0x%x ", b)
 	}
 	debugf("\n")
+
+	var localvars []interface{} = make([]interface{}, 16)
+
 	for {
 		if byteIndex >= len(bytes) {
 			break
@@ -502,10 +505,22 @@ func executeCode(code []byte) {
 		debugf("inst 0x%02x\n", b)
 		// https://docs.oracle.com/javase/specs/jvms/se12/html/jvms-6.html#jvms-6.5
 		switch b {
+		case 0x10: // bipush
+			operand := readU1()
+			debugf("  bipush 0x%02x\n", operand)
+			push(operand)
 		case 0x12: // ldc
 			operand := readU1()
 			debugf("  ldc 0x%02x\n", operand)
 			push(operand)
+		case 0x1b: // iload_1
+			debugf("  iload_1\n")
+			arg := localvars[1]
+			push(arg)
+		case 0x3c: // istore_1
+			arg := pop()
+			debugf("  istore_1\n")
+			localvars[1] = arg
 		case 0xb1: // return
 			debugf("  return\n")
 			return
@@ -552,8 +567,12 @@ func executeCode(code []byte) {
 			receiver := classMap[fieldClassInfo.getName()].staicfields[fieldName]
 			method := classMap[methodClassInfo.getName()].methods[methodName]
 			method(receiver, arg0StringValue)
+		case 0xb8: // invokestatic
+			operand := readU2()
+			debugf("  invokestatic 0x%02x\n", operand)
+
 		default:
-			panic("Unknown instruction")
+			panic(fmt.Sprintf("Unknown instruction: 0x%02X", b))
 		}
 		debugf("#  stack=%#v\n", stack)
 	}
@@ -615,7 +634,7 @@ func initJava() {
 
 
 func main() {
-	debug = false
+	debug = true
 	initJava()
 	cf := parseClassFile("/dev/stdin")
 	cpool = cf.constant_pool
