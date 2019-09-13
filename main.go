@@ -369,9 +369,8 @@ func debugConstantPool(cp ConstantPool)  {
 		if i == 0 {
 			continue
 		}
-		debugf(" #%02d = ",i)
 		s := c2s(c)
-		debugf("%s\n", s)
+		debugf(" #%02d = %s\n",i, s)
 	}
 }
 
