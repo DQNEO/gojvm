@@ -132,9 +132,15 @@ func readCafebabe() [4]byte {
 	return [4]byte{bytes[0], bytes[1], bytes[2], bytes[3]}
 }
 
-type u1 byte
+type u1 uint8
 type u2 uint16
 type u4 uint32
+
+func readU1() u1 {
+	b := bytes[byteIndex]
+	byteIndex++
+	return u1(b)
+}
 
 func readU2() u2 {
 	left := bytes[byteIndex]
@@ -157,12 +163,6 @@ func readBytes(n int) []byte {
 	r := bytes[byteIndex : byteIndex+n]
 	byteIndex += n
 	return r
-}
-
-func readByte() u1 {
-	b := bytes[byteIndex]
-	byteIndex++
-	return u1(b)
 }
 
 func readAttributeInfo() AttributeInfo {
@@ -253,7 +253,7 @@ func parseClassFile(filename string) *ClassFile {
 	var constant_pool []ConstantPoolEntry
 	constant_pool = append(constant_pool, nil)
 	for i := u2(0); i < constant_pool_count-1; i++ {
-		tag := readByte()
+		tag := readU1()
 		//debugf("[i=%d] tag=%02X\n", i, tag)
 		var e ConstantPoolEntry
 		switch tag {
@@ -473,12 +473,6 @@ func debugClassFile(cf *ClassFile) {
 	debugf("attribute=%v\n", cf.attributes[0])
 }
 
-func getByte() byte {
-	b := bytes[byteIndex]
-	byteIndex++
-	return b
-}
-
 var stack []interface{}
 
 func push(e interface{}) {
@@ -505,11 +499,11 @@ func executeCode(code []byte) {
 		if byteIndex >= len(bytes) {
 			break
 		}
-		b := getByte()
+		b := readU1()
 		debugf("inst 0x%02x\n", b)
 		switch b {
 		case 0x12: // ldc
-			operand := readByte()
+			operand := readU1()
 			debugf("  ldc 0x%02x\n", operand)
 			push(operand)
 		case 0xb1: // return
