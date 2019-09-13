@@ -514,20 +514,20 @@ func executeCode(code []byte) {
 			arg0StringValue := string(cpool.getUTF8Byttes(arg0.string_index))
 			debugf("    arg0=#%d,%s\n", arg0.string_index, arg0StringValue)
 
-			// receiver info
-			receiver := pop()
+			// receiverId info
+			receiverId := pop()
 			// System.out:PrintStream
-			fieldRef := cpool.getFieldref(receiver.(u2))
+			fieldRef := cpool.getFieldref(receiverId.(u2))
 			classInfo := cpool.getClassInfo(fieldRef.class_index)// class System
 			className := string(cpool.getUTF8Byttes(classInfo.name_index))
 			cNameAndType := cpool.getNameAndType(fieldRef.name_and_type_index)
 			fieldName := string(cpool.getUTF8Byttes(cNameAndType.name_index))
 			desc = cpool.getUTF8Byttes(cNameAndType.descriptor_index)
-			debugf("    receiver : %s.%s#%s\n", className, fieldName, desc) // java/lang/System
+			debugf("    receiverId : %s.%s#%s\n", className, fieldName, desc) // java/lang/System
 			debugf("[Invoking]\n")
-			object := classMap[className].staicfields[fieldName]
+			receiver := classMap[className].staicfields[fieldName]
 			method := classMap[methodClassName].methods[methodName]
-			method(object, arg0StringValue)
+			method(receiver, arg0StringValue)
 		default:
 			panic("Unknown instruction")
 		}
