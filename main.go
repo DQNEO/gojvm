@@ -460,7 +460,7 @@ func debugClassFile(cf *ClassFile) {
 	debugf("methods_count=%d\n", cf.methods_count)
 
 	for _, methodInfo := range cf.methods{
-		methodName := cf.constant_pool.getUTF8AsString(methodInfo.name_index)
+		methodName := cp.getUTF8AsString(methodInfo.name_index)
 		debugf(" %s:\n", methodName)
 		for _, ca  := range methodInfo.ai {
 			for _, c := range ca.code {
