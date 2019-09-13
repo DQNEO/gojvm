@@ -102,6 +102,31 @@ func (c *CONSTANT_Class_info) getName() string {
 	return cpool.getUTF8AsString(c.name_index)
 }
 
+func (c *CONSTANT_Fieldref_info) getClassInfo() *CONSTANT_Class_info {
+	return cpool.getClassInfo(c.class_index)
+}
+
+func (c *CONSTANT_Fieldref_info) getNameAndType() *CONSTANT_NameAndType_info {
+	return cpool.getNameAndType(c.name_and_type_index)
+}
+
+func (c *CONSTANT_Methodref_info) getClassInfo() *CONSTANT_Class_info {
+	return cpool.getClassInfo(c.class_index)
+}
+
+func (c *CONSTANT_Methodref_info) getNameAndType() *CONSTANT_NameAndType_info {
+	return cpool.getNameAndType(c.name_and_type_index)
+}
+
+
+func (c *CONSTANT_NameAndType_info) getName() string {
+	return cpool.getUTF8AsString(c.name_index)
+}
+
+func (c *CONSTANT_NameAndType_info) getDescriptor() string {
+	return cpool.getUTF8AsString(c.descriptor_index)
+}
+
 func readCafebabe() [4]byte {
 	byteIndex += 4
 	return [4]byte{bytes[0], bytes[1], bytes[2], bytes[3]}
@@ -390,13 +415,14 @@ func (cp ConstantPool) getNameAndType(id u2) *CONSTANT_NameAndType_info {
 	return c
 }
 
-func (cp ConstantPool) getString(id u2) *CONSTANT_String_info {
+func (cp ConstantPool) getString(id u2) string {
 	entry := cp.get(id)
 	c, ok := entry.(*CONSTANT_String_info)
 	if !ok {
 		panic("type mismatch")
 	}
-	return c
+
+	return cp.getUTF8AsString(c.string_index)
 }
 
 func (cp ConstantPool) getUTF8AsString(id u2) string {
@@ -492,25 +518,23 @@ func executeCode(code []byte) {
 			operand := readU2()
 			debugf("  getstatic 0x%02x\n", operand)
 			fieldRef := cpool.getFieldref(operand)
-			classInfo := cpool.getClassInfo(fieldRef.class_index)
-			className := classInfo.getName()
-			nameAndType := cpool.getNameAndType(fieldRef.name_and_type_index)
-			name := cpool.getUTF8AsString(nameAndType.name_index)
-			desc := cpool.getUTF8AsString(nameAndType.descriptor_index)
-			debugf("   => %s#%s#%s#%s\n", c2s(fieldRef), className, name, desc)
+			classInfo := fieldRef.getClassInfo()
+			nameAndType := fieldRef.getNameAndType()
+			name := nameAndType.getName()
+			desc := nameAndType.getDescriptor()
+			debugf("   => %s#%s#%s#%s\n", c2s(fieldRef), classInfo.getName(), name, desc)
 			push(operand)
 		case 0xb6: // invokevirtual
 			operand := readU2()
 			debugf("  invokevirtual 0x%02x\n", operand)
 			methodRef := cpool.getMethodref(operand)
-			methodClassInfo := cpool.getClassInfo(methodRef.class_index)
-			methodClassName := methodClassInfo.getName()
-			methodNameAndType := cpool.getNameAndType(methodRef.name_and_type_index)
+			methodClassInfo := methodRef.getClassInfo()
+			methodNameAndType := methodRef.getNameAndType()
 			methodName :=  cpool.getUTF8AsString(methodNameAndType.name_index)
-			debugf("    invoking %s.%s()\n", methodClassName, methodName) // java/lang/System
+			debugf("    invoking %s.%s()\n", methodClassInfo.getName(), methodName) // java/lang/System
 
 			// argument info
-			desc := cpool.getUTF8AsString(methodNameAndType.descriptor_index)
+			desc := methodNameAndType.getDescriptor()
 			desc_args := strings.Split(desc, ";")
 			num_args := len(desc_args) - 1
 			debugf("    descriptor=%s, num_args=%d\n", desc, num_args)
@@ -518,8 +542,8 @@ func executeCode(code []byte) {
 			arg0ifc := pop()
 			arg0id := arg0ifc.(u1)
 			arg0 := cpool.getString(u2(arg0id))
-			arg0StringValue := cpool.getUTF8AsString(arg0.string_index)
-			debugf("    arg0=#%d,%s\n", arg0.string_index, arg0StringValue)
+			arg0StringValue := arg0
+			debugf("    arg0=%s\n",  arg0StringValue)
 
 			// receiverId info
 			receiverId := pop()
@@ -534,7 +558,7 @@ func executeCode(code []byte) {
 
 			debugf("[Invoking]\n")
 			receiver := classMap[fieldClassName].staicfields[fieldName]
-			method := classMap[methodClassName].methods[methodName]
+			method := classMap[methodClassInfo.getName()].methods[methodName]
 			method(receiver, arg0StringValue)
 		default:
 			panic("Unknown instruction")
