@@ -519,9 +519,8 @@ func executeCode(code []byte) {
 			debugf("  getstatic 0x%02x\n", operand)
 			fieldRef := cpool.getFieldref(operand)
 			classInfo := fieldRef.getClassInfo()
-			nameAndType := fieldRef.getNameAndType()
-			name := nameAndType.getName()
-			desc := nameAndType.getDescriptor()
+			name := fieldRef.getNameAndType().getName()
+			desc := fieldRef.getNameAndType().getDescriptor()
 			debugf("   => %s#%s#%s#%s\n", c2s(fieldRef), classInfo.getName(), name, desc)
 			push(operand)
 		case 0xb6: // invokevirtual
@@ -549,15 +548,13 @@ func executeCode(code []byte) {
 			receiverId := pop()
 			// System.out:PrintStream
 			fieldRef := cpool.getFieldref(receiverId.(u2))
-			fieldClassInfo := cpool.getClassInfo(fieldRef.class_index)         // class System
-			fieldClassName := fieldClassInfo.getName() // java/lang/System
-			fieldNameAndType := cpool.getNameAndType(fieldRef.name_and_type_index)
-			fieldName := cpool.getUTF8AsString(fieldNameAndType.name_index)    // out
-			desc = cpool.getUTF8AsString(fieldNameAndType.descriptor_index)    // Ljava/io/PrintStream;
-			debugf("    receiver=%s.%s %s\n", fieldClassName, fieldName, desc) // java/lang/System.out Ljava/io/PrintStream;
+			fieldClassInfo := fieldRef.getClassInfo()         // class java/lang/System
+			fieldNameAndType := fieldRef.getNameAndType()
+			fieldName := fieldNameAndType.getName()  // out
+			debugf("    receiver=%s.%s %s\n", fieldClassInfo.getName(), fieldName, fieldNameAndType.getDescriptor()) // java/lang/System.out Ljava/io/PrintStream;
 
 			debugf("[Invoking]\n")
-			receiver := classMap[fieldClassName].staicfields[fieldName]
+			receiver := classMap[fieldClassInfo.getName()].staicfields[fieldName]
 			method := classMap[methodClassInfo.getName()].methods[methodName]
 			method(receiver, arg0StringValue)
 		default:
