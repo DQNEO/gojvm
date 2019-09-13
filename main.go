@@ -343,19 +343,19 @@ func c2s(c interface{}) string {
 	switch c.(type) {
 	case *CONSTANT_Fieldref_info:
 		cf := c.(*CONSTANT_Fieldref_info)
-		return fmt.Sprintf("Fieldref\t#%d.#%d",
+		return fmt.Sprintf("Fieldref\t#0x%02x.#0x%02x",
 			cf.class_index, cf.name_and_type_index)
 	case *CONSTANT_Methodref_info:
 		cm := c.(*CONSTANT_Methodref_info)
-		return fmt.Sprintf("Methodref\t#%d.#%d",
+		return fmt.Sprintf("Methodref\t#0x%02x.#0x%02x",
 			cm.class_index, cm.name_and_type_index)
 	case *CONSTANT_Class_info:
-		return fmt.Sprintf("Class\t%d", c.(*CONSTANT_Class_info).name_index)
+		return fmt.Sprintf("Class\t0x%02x", c.(*CONSTANT_Class_info).name_index)
 	case *CONSTANT_String_info:
-		return fmt.Sprintf("String\t%d", c.(*CONSTANT_String_info).string_index)
+		return fmt.Sprintf("String\t0x%02x", c.(*CONSTANT_String_info).string_index)
 	case *CONSTANT_NameAndType_info:
 		cn := c.(*CONSTANT_NameAndType_info)
-		return fmt.Sprintf("NameAndType\t#%d:#%d", cn.name_index, cn.descriptor_index)
+		return fmt.Sprintf("NameAndType\t#0x%02x:#0x%02x", cn.name_index, cn.descriptor_index)
 	case *CONSTANT_Utf8_info:
 		return fmt.Sprintf("Utf8\t%s", c.(*CONSTANT_Utf8_info).bytes)
 	default:
@@ -370,7 +370,7 @@ func debugConstantPool(cp ConstantPool)  {
 			continue
 		}
 		s := c2s(c)
-		debugf(" #%02d = %s\n",i, s)
+		debugf(" #0x%02x = %s\n",i, s)
 	}
 }
 
@@ -491,7 +491,7 @@ func executeCode(code []byte) {
 	byteIndex = 0
 	bytes = code
 	for _, b := range code {
-		debugf("0x%x ", b)
+		debugf("0x%02x ", b)
 	}
 	debugf("\n")
 
@@ -544,15 +544,25 @@ func executeCode(code []byte) {
 
 			// argument info
 			desc := methodNameAndType.getDescriptor()
-			desc_args := strings.Split(desc, ";")
-			num_args := len(desc_args) - 1
-			debugf("    descriptor=%s, num_args=%d\n", desc, num_args)
-
-			arg0ifc := pop()
-			arg0id := arg0ifc.(u1)
-			arg0 := cpool.getString(u2(arg0id))
-			arg0StringValue := arg0
-			debugf("    arg0=%s\n",  arg0StringValue)
+			var arg0 interface{}
+			var num_args int
+			if strings.Contains(desc, ";") {
+				desc_args := strings.Split(desc, ";")
+				num_args = len(desc_args) - 1
+				debugf("    descriptor=%s, num_args=%d\n", desc, num_args)
+				arg0ifc := pop()
+				debugf("    arg0ifc=%T, %v\n", arg0ifc, arg0ifc)
+				arg0id := u2(arg0ifc.(u1))
+				arg0c := cpool.getString(u2(arg0id))
+				arg0 = arg0c
+			} else {
+				num_args = strings.Count(desc, "I")
+				debugf("    descriptor=%s, num_args=%d\n", desc, num_args)
+				arg0ifc := pop()
+				debugf("    arg0ifc=%T, %v\n", arg0ifc, arg0ifc)
+				arg0 = arg0ifc.(u1)
+			}
+			debugf("    arg0=%v\n", arg0)
 
 			// receiverId info
 			receiverId := pop()
@@ -566,11 +576,29 @@ func executeCode(code []byte) {
 			debugf("[Invoking]\n")
 			receiver := classMap[fieldClassInfo.getName()].staicfields[fieldName]
 			method := classMap[methodClassInfo.getName()].methods[methodName]
-			method(receiver, arg0StringValue)
+			method(receiver, arg0)
 		case 0xb8: // invokestatic
-			operand := readU2()
-			debugf("  invokestatic 0x%02x\n", operand)
+			// https://docs.oracle.com/javase/specs/jvms/se12/html/jvms-6.html#jvms-6.5.invokestatic
+			indexbyte1 := readU1()
+			indexbyte2 := readU1()
+			index := (indexbyte1 << 8) | indexbyte2
+			debugf("  invokestatic 0x%02x, 0x%02x => 0x%02x\n", indexbyte1, indexbyte2, index)
+			methodRef := cpool.getMethodref(u2(index))
+			methodClassInfo := methodRef.getClassInfo()
+			methodNameAndType := methodRef.getNameAndType()
+			methodName :=  cpool.getUTF8AsString(methodNameAndType.name_index)
+			debugf("    invoking %s.%s()\n", methodClassInfo.getName(), methodName) // java/lang/System
 
+			// argument info
+			desc := methodNameAndType.getDescriptor() // (II)I
+			num_args := 2 // (II) => 2
+			debugf("    descriptor=%s, num_args=%d\n", desc, num_args)
+			arg1 := pop().(u1)
+			arg2 := pop().(u1)
+
+			ret := arg1 + arg2
+			debugf("sum %d = %d + %d\n", ret, arg1, arg2)
+			push(ret)
 		default:
 			panic(fmt.Sprintf("Unknown instruction: 0x%02X", b))
 		}
@@ -620,12 +648,7 @@ func initJava() {
 					if !ok {
 						panic("Type mismatch")
 					}
-					s, ok := args[1].(string)
-					if !ok {
-						panic("Type mismatch")
-					}
-
-					fmt.Fprint(ps.fp, s + "\n")
+					fmt.Fprintln(ps.fp, args[1])
 				},
 			},
 		},
