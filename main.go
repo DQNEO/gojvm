@@ -518,14 +518,14 @@ func executeCode(code []byte) {
 			receiverId := pop()
 			// System.out:PrintStream
 			fieldRef := cpool.getFieldref(receiverId.(u2))
-			classInfo := cpool.getClassInfo(fieldRef.class_index)// class System
-			className := string(cpool.getUTF8Byttes(classInfo.name_index))
-			cNameAndType := cpool.getNameAndType(fieldRef.name_and_type_index)
-			fieldName := string(cpool.getUTF8Byttes(cNameAndType.name_index))
-			desc = cpool.getUTF8Byttes(cNameAndType.descriptor_index)
-			debugf("    receiverId : %s.%s#%s\n", className, fieldName, desc) // java/lang/System
+			fieldClassInfo := cpool.getClassInfo(fieldRef.class_index) // class System
+			fieldClassName := string(cpool.getUTF8Byttes(fieldClassInfo.name_index))
+			fieldNameAndType := cpool.getNameAndType(fieldRef.name_and_type_index)
+			fieldName := string(cpool.getUTF8Byttes(fieldNameAndType.name_index))
+			desc = cpool.getUTF8Byttes(fieldNameAndType.descriptor_index)
+			debugf("    receiver=%s.%s#%s\n", fieldClassName, fieldName, desc) // java/lang/System
 			debugf("[Invoking]\n")
-			receiver := classMap[className].staicfields[fieldName]
+			receiver := classMap[fieldClassName].staicfields[fieldName]
 			method := classMap[methodClassName].methods[methodName]
 			method(receiver, arg0StringValue)
 		default:
