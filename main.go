@@ -127,7 +127,7 @@ func (c *CONSTANT_NameAndType_info) getDescriptor() string {
 	return cpool.getUTF8AsString(c.descriptor_index)
 }
 
-func readCafebabe() [4]byte {
+func readMagic() [4]byte {
 	byteIndex += 4
 	return [4]byte{bytes[0], bytes[1], bytes[2], bytes[3]}
 }
@@ -245,7 +245,7 @@ func parseClassFile(filename string) *ClassFile {
 		panic(err)
 	}
 
-	magic := readCafebabe()
+	magic := readMagic() // cafebabe
 	minor_version := readU2()
 	major_version := readU2()
 	constant_pool_count := readU2()
