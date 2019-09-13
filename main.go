@@ -595,6 +595,7 @@ func initJava() {
 
 
 func main() {
+	debug = true
 	initJava()
 	cf := parseClassFile("/dev/stdin")
 	cpool = cf.constant_pool
