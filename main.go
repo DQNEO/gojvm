@@ -526,12 +526,8 @@ func executeCode(code []byte) {
 			debugf("    receiver : %s.%s#%s\n", className, fieldName, desc) // java/lang/System
 			debugf("[Invoking]\n")
 			object := classMap[className].staicfields[fieldName]
-			args := []interface{}{
-				object,
-				arg0StringValue,
-			}
 			method := classMap[methodClassName].methods[methodName]
-			method(args...)
+			method(object, arg0StringValue)
 		default:
 			panic("Unknown instruction")
 		}
