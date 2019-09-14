@@ -5,7 +5,7 @@ gojvm is an JVM implementation by Go.
 It can interpret and run a JVM bytecode file.
 Currently, it only supports "hello world" and arithmetic addition.
 
-# USAGE
+# Usage
 
 ## Hello world
 
@@ -51,17 +51,17 @@ $ cat Arith.class | go run main.go                                              
 make test
 ```
 
-# ACKNOWLEDGMENT
+# Acknowledgment
 
-gjvm is inspired by [PHPJava](https://github.com/php-java/php-java).
+gojvm is inspired by [PHPJava](https://github.com/php-java/php-java).
 
 I really appreciate the work.
 
-# LICENSE
+# License
 
 MIT
 
-# AUTHOR
+# Author
 
 @DQNEO
 
